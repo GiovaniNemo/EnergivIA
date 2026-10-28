@@ -29,6 +29,21 @@ export default function SettingsPage(): JSX.Element {
           </CardHeader>
         </Card>
       </Link>
+
+      <Link
+        href="/configuracoes/documentos"
+        className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60"
+      >
+        <Card className="transition hover:border-emerald-500/40">
+          <CardHeader>
+            <CardTitle>Modelos de Contratos & Documentos</CardTitle>
+            <CardDescription>
+              Personalize o modelo padrão global de Contrato Solar e Procuração ANEEL aplicados aos
+              seus próximos clientes.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </Link>
     </div>
   );
 }

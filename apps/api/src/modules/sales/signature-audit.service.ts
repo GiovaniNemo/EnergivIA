@@ -648,7 +648,11 @@ export class SignatureAuditService {
       data["cpf_cliente"] = signerCpfResolved;
     }
 
-    return this.documentTemplateService.buildDocumentHtml(doc.templateType as DocumentType, data);
+    return this.documentTemplateService.buildDocumentHtml(
+      doc.templateType as DocumentType,
+      data,
+      tenant
+    );
   }
 
   async getDocumentPdf(

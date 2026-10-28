@@ -327,25 +327,227 @@ export class DocumentTemplateService {
   }
 
   /**
-   * Constrói o HTML final do documento a partir do tipo e dados
+   * Retorna o HTML padrão de fábrica da plataforma para o tipo de documento
    */
-  buildDocumentHtml(
-    type: DocumentType | string,
-    data: Record<string, string | number | undefined | null>
-  ): string {
-    let rawTemplate = "";
-
+  getFactoryDefaultTemplate(type: DocumentType | string): string {
     switch (String(type)) {
       case "CONTRATO_PF":
       case "CONTRATO_PJ":
-        rawTemplate = CONTRACT_PF_TEMPLATE;
-        break;
+        return CONTRACT_PF_TEMPLATE;
       case "PROCURACAO_PF":
       case "PROCURACAO_PJ":
-        rawTemplate = POWER_OF_ATTORNEY_PF_TEMPLATE;
-        break;
+        return POWER_OF_ATTORNEY_PF_TEMPLATE;
       default:
         throw new BadRequestException(`Tipo de documento não suportado: ${type}`);
+    }
+  }
+
+  /**
+   * Catálogo descritivo de variáveis dinâmicas disponíveis para contratos e procurações
+   */
+  getAvailableTemplateVariables(): Array<{
+    key: string;
+    label: string;
+    description: string;
+    category: "Empresa" | "Cliente" | "Sistema Solar" | "Comercial" | "Assinatura";
+  }> {
+    return [
+      {
+        key: "bloco_logo_empresa",
+        label: "Logo Oficial da Empresa",
+        description: "Imagem formatada da logo da sua empresa",
+        category: "Empresa",
+      },
+      {
+        key: "nome_empresa",
+        label: "Nome da Empresa",
+        description: "Razão social ou nome fantasia da integradora",
+        category: "Empresa",
+      },
+      {
+        key: "cnpj_empresa",
+        label: "CNPJ da Empresa",
+        description: "CNPJ formatado da integradora",
+        category: "Empresa",
+      },
+      {
+        key: "endereco_empresa",
+        label: "Endereço da Empresa",
+        description: "Sede completa cadastrada nas configurações",
+        category: "Empresa",
+      },
+      {
+        key: "nome_vendedor",
+        label: "Consultor Técnico / Vendedor",
+        description: "Nome do responsável técnico ou vendedor",
+        category: "Empresa",
+      },
+      {
+        key: "qualificacao_contratada",
+        label: "Qualificação da Contratada",
+        description: "Parágrafo jurídico completo da empresa integradora",
+        category: "Empresa",
+      },
+      {
+        key: "qualificacao_contratante",
+        label: "Qualificação do Contratante",
+        description: "Parágrafo jurídico completo do cliente (PF ou PJ)",
+        category: "Cliente",
+      },
+      {
+        key: "nome_cliente",
+        label: "Nome do Cliente",
+        description: "Nome completo do cliente ou representante",
+        category: "Cliente",
+      },
+      {
+        key: "cpf_cliente",
+        label: "CPF / CNPJ do Cliente",
+        description: "Documento oficial do cliente",
+        category: "Cliente",
+      },
+      {
+        key: "rg_cliente",
+        label: "RG / IE do Cliente",
+        description: "Registro geral ou Inscrição Estadual",
+        category: "Cliente",
+      },
+      {
+        key: "endereco_instalacao",
+        label: "Endereço da Instalação",
+        description: "Rua, número e complemento do local da usina",
+        category: "Sistema Solar",
+      },
+      {
+        key: "cidade_instalacao",
+        label: "Cidade da Instalação",
+        description: "Município onde os painéis serão instalados",
+        category: "Sistema Solar",
+      },
+      {
+        key: "estado_instalacao",
+        label: "Estado (UF)",
+        description: "UF da instalação (ex: PR, SP, MG)",
+        category: "Sistema Solar",
+      },
+      {
+        key: "cep_instalacao",
+        label: "CEP da Instalação",
+        description: "Código postal do imóvel",
+        category: "Sistema Solar",
+      },
+      {
+        key: "concessionaria",
+        label: "Concessionária de Energia",
+        description: "Distribuidora de energia (ex: COPEL, CPFL, CEMIG)",
+        category: "Sistema Solar",
+      },
+      {
+        key: "numero_uc",
+        label: "Número da UC",
+        description: "Unidade consumidora ou conta contrato",
+        category: "Sistema Solar",
+      },
+      {
+        key: "potencia_kwp",
+        label: "Potência em kWp",
+        description: "Potência de pico do gerador solar",
+        category: "Sistema Solar",
+      },
+      {
+        key: "geracao_estimada_kwh",
+        label: "Geração Estimada (kWh)",
+        description: "Média mensal de energia gerada em kWh/mês",
+        category: "Sistema Solar",
+      },
+      {
+        key: "tabela_equipamentos",
+        label: "Tabela de Equipamentos",
+        description: "Lista discriminada de painéis, inversores e estruturas",
+        category: "Sistema Solar",
+      },
+      {
+        key: "valor_total",
+        label: "Valor Total do Contrato",
+        description: "Investimento do sistema em Reais (R$)",
+        category: "Comercial",
+      },
+      {
+        key: "forma_pagamento",
+        label: "Condições de Pagamento",
+        description: "À vista, financiamento bancário ou parcelado",
+        category: "Comercial",
+      },
+      {
+        key: "chave_pix",
+        label: "Chave PIX",
+        description: "Chave PIX da integradora para transferências",
+        category: "Comercial",
+      },
+      {
+        key: "prazo_dias",
+        label: "Prazo de Execução (Dias)",
+        description: "Prazo padrão em dias para conclusão da usina",
+        category: "Comercial",
+      },
+      {
+        key: "garantia_meses",
+        label: "Garantia da Instalação (Meses)",
+        description: "Meses de garantia da mão de obra de montagem",
+        category: "Comercial",
+      },
+      {
+        key: "multa_rescisao_pct",
+        label: "Multa de Rescisão (%)",
+        description: "Percentual de multa por rescisão antecipada",
+        category: "Comercial",
+      },
+      {
+        key: "bloco_clausulas_personalizadas",
+        label: "Cláusulas Adicionais",
+        description: "Condições especiais personalizadas pelo integrador",
+        category: "Comercial",
+      },
+      {
+        key: "data_atual",
+        label: "Data Atual",
+        description: "Data de emissão por extenso (ex: 28 de outubro de 2026)",
+        category: "Comercial",
+      },
+      {
+        key: "bloco_assinatura_cliente",
+        label: "Bloco de Assinatura",
+        description: "Área de assinatura digital com carimbo e validação OTP",
+        category: "Assinatura",
+      },
+      {
+        key: "folha_auditoria_anexa",
+        label: "Folha de Auditoria Jurídica",
+        description: "Trilha criptográfica anexa no final do documento",
+        category: "Assinatura",
+      },
+    ];
+  }
+
+  /**
+   * Constrói o HTML final do documento a partir do tipo, dados e configurações do tenant
+   */
+  buildDocumentHtml(
+    type: DocumentType | string,
+    data: Record<string, string | number | undefined | null>,
+    tenant?: any
+  ): string {
+    let rawTemplate = "";
+
+    const tenantSettings = (tenant?.settings as Record<string, unknown>) || {};
+    const customTemplates =
+      (tenantSettings["customDocumentTemplates"] as Record<string, string>) || {};
+    const customTemplate = customTemplates[String(type)];
+
+    if (customTemplate && typeof customTemplate === "string" && customTemplate.trim().length > 0) {
+      rawTemplate = customTemplate;
+    } else {
+      rawTemplate = this.getFactoryDefaultTemplate(type);
     }
 
     return this.replaceTags(rawTemplate, data);

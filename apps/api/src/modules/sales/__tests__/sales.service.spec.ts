@@ -23,6 +23,10 @@ describe("SalesService", () => {
       lead: {
         update: vi.fn(),
       },
+      tenant: {
+        findUnique: vi.fn(),
+        update: vi.fn(),
+      },
       saleDocument: {
         findFirst: vi.fn(),
         update: vi.fn(),
@@ -39,6 +43,10 @@ describe("SalesService", () => {
         sha256Hash: "hash-sha256-mocked",
       }),
       savePdfToDisk: vi.fn(),
+      getFactoryDefaultTemplate: vi.fn().mockReturnValue("<html>Padrão de Fábrica</html>"),
+      getAvailableTemplateVariables: vi
+        .fn()
+        .mockReturnValue([{ key: "nome_cliente", label: "Nome" }]),
     } as any;
 
     service = new SalesService(mockPrisma, mockDocumentTemplateService);
@@ -390,6 +398,83 @@ describe("SalesService", () => {
         /assinados/
       );
       expect(mockPrisma.saleDocument.delete).not.toHaveBeenCalled();
+    });
+  });
+  describe("Global Document Templates", () => {
+    it("should get global templates with custom or factory defaults", async () => {
+      mockPrisma.tenant.findUnique.mockResolvedValue({
+        id: "tenant-1",
+        name: "Solar Corp",
+        settings: {
+          customDocumentTemplates: {
+            CONTRATO_PF: "<html>Contrato Customizado Global</html>",
+          },
+        },
+      });
+
+      const res = await service.getGlobalDocumentTemplates("tenant-1");
+      expect(res.templates.CONTRATO_PF.isCustom).toBe(true);
+      expect(res.templates.CONTRATO_PF.contentHtml).toBe(
+        "<html>Contrato Customizado Global</html>"
+      );
+      expect(res.templates.PROCURACAO_PF.isCustom).toBe(false);
+      expect(res.templates.PROCURACAO_PF.contentHtml).toBe("<html>Padrão de Fábrica</html>");
+      expect(res.availableVariables).toHaveLength(1);
+    });
+
+    it("should update global document template for tenant", async () => {
+      mockPrisma.tenant.findUnique.mockResolvedValue({
+        id: "tenant-1",
+        settings: {},
+      });
+      mockPrisma.tenant.update.mockResolvedValue({});
+
+      const res = await service.updateGlobalDocumentTemplate(
+        "tenant-1",
+        "CONTRATO_PF" as any,
+        "<html>Novo Modelo Global</html>"
+      );
+
+      expect(res.success).toBe(true);
+      expect(mockPrisma.tenant.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "tenant-1" },
+          data: {
+            settings: {
+              customDocumentTemplates: {
+                CONTRATO_PF: "<html>Novo Modelo Global</html>",
+                CONTRATO_PJ: "<html>Novo Modelo Global</html>",
+              },
+            },
+          },
+        })
+      );
+    });
+
+    it("should reset global document template to factory default", async () => {
+      mockPrisma.tenant.findUnique.mockResolvedValue({
+        id: "tenant-1",
+        settings: {
+          customDocumentTemplates: {
+            CONTRATO_PF: "<html>Customizado</html>",
+            CONTRATO_PJ: "<html>Customizado</html>",
+          },
+        },
+      });
+      mockPrisma.tenant.update.mockResolvedValue({});
+
+      const res = await service.resetGlobalDocumentTemplate("tenant-1", "CONTRATO_PF" as any);
+      expect(res.success).toBe(true);
+      expect(res.isCustom).toBe(false);
+      expect(res.contentHtml).toBe("<html>Padrão de Fábrica</html>");
+      expect(mockPrisma.tenant.update).toHaveBeenCalledWith({
+        where: { id: "tenant-1" },
+        data: {
+          settings: {
+            customDocumentTemplates: {},
+          },
+        },
+      });
     });
   });
 });

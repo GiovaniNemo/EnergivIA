@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   UseGuards,
 } from "@nestjs/common";
@@ -38,6 +39,31 @@ export class SalesController {
   @Get()
   listSales(@TenantId() tenantId: string, @Query() query: QuerySalesDto) {
     return this.salesService.listSales(tenantId, query);
+  }
+
+  @Get("templates/global")
+  getGlobalDocumentTemplates(@TenantId() tenantId: string) {
+    return this.salesService.getGlobalDocumentTemplates(tenantId);
+  }
+
+  @Put("templates/global")
+  updateGlobalDocumentTemplate(
+    @TenantId() tenantId: string,
+    @Body() body: { documentType: import("@prisma/client").DocumentType; contentHtml: string }
+  ) {
+    return this.salesService.updateGlobalDocumentTemplate(
+      tenantId,
+      body.documentType,
+      body.contentHtml
+    );
+  }
+
+  @Post("templates/global/reset")
+  resetGlobalDocumentTemplate(
+    @TenantId() tenantId: string,
+    @Body() body: { documentType: import("@prisma/client").DocumentType }
+  ) {
+    return this.salesService.resetGlobalDocumentTemplate(tenantId, body.documentType);
   }
 
   @Get(":id")

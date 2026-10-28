@@ -140,6 +140,14 @@ export const MENU_ITEMS: MenuItem[] = [
     section: "management",
   },
   {
+    label: "Modelos de Contratos",
+    icon: FileText,
+    path: "/configuracoes/documentos",
+    section: "management",
+    tooltip: "Personalize os modelos padrão de Contrato Solar e Procuração ANEEL da sua empresa",
+    requiresRole: "admin",
+  },
+  {
     label: "Meus Planos",
     icon: Crown,
     path: "/gestao/meus-planos",

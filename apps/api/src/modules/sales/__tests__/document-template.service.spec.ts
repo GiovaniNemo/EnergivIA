@@ -90,4 +90,31 @@ describe("DocumentTemplateService", () => {
     expect(typeof sha256Hash).toBe("string");
     expect(sha256Hash.length).toBe(64);
   });
+  it("should use custom tenant template when configured in settings", () => {
+    const data = {
+      nome_cliente: "Carlos Silva",
+    };
+    const tenant = {
+      settings: {
+        customDocumentTemplates: {
+          CONTRATO_PF: "<div>Meu Contrato Customizado para {{nome_cliente}}</div>",
+        },
+      },
+    };
+
+    const html = service.buildDocumentHtml("CONTRATO_PF", data, tenant);
+    expect(html).toBe("<div>Meu Contrato Customizado para Carlos Silva</div>");
+  });
+
+  it("should provide factory defaults and available variables catalog", () => {
+    const defaultContract = service.getFactoryDefaultTemplate("CONTRATO_PF");
+    const defaultPoa = service.getFactoryDefaultTemplate("PROCURACAO_PF");
+    const variables = service.getAvailableTemplateVariables();
+
+    expect(defaultContract).toContain("CONTRATO DE PRESTAÇÃO DE SERVIÇOS");
+    expect(defaultPoa).toContain("PROCURAÇÃO ESPECÍFICA");
+    expect(variables.length).toBeGreaterThan(15);
+    expect(variables.some((v) => v.key === "nome_cliente")).toBe(true);
+    expect(variables.some((v) => v.key === "valor_total")).toBe(true);
+  });
 });

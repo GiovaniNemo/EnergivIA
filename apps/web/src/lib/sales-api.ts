@@ -140,3 +140,56 @@ export async function signPublicDocument(
     body: JSON.stringify(data),
   });
 }
+
+// Modelos de Documentos Padrão Globais da Organização
+export interface GlobalDocumentTemplateItem {
+  documentType: "CONTRATO_PF" | "PROCURACAO_PF";
+  title: string;
+  contentHtml: string;
+  isCustom: boolean;
+  factoryDefaultHtml: string;
+}
+
+export interface TemplateVariableMetadata {
+  key: string;
+  label: string;
+  description: string;
+  category: "Empresa" | "Cliente" | "Sistema Solar" | "Comercial" | "Assinatura";
+}
+
+export interface GlobalDocumentTemplatesResponse {
+  templates: {
+    CONTRATO_PF: GlobalDocumentTemplateItem;
+    PROCURACAO_PF: GlobalDocumentTemplateItem;
+  };
+  availableVariables: TemplateVariableMetadata[];
+}
+
+export async function getGlobalDocumentTemplates(): Promise<GlobalDocumentTemplatesResponse> {
+  return apiFetch("/sales/templates/global");
+}
+
+export async function updateGlobalDocumentTemplate(
+  documentType: "CONTRATO_PF" | "PROCURACAO_PF",
+  contentHtml: string
+): Promise<{ success: boolean; documentType: string; isCustom: boolean; message: string }> {
+  return apiFetch("/sales/templates/global", {
+    method: "PUT",
+    body: JSON.stringify({ documentType, contentHtml }),
+  });
+}
+
+export async function resetGlobalDocumentTemplate(
+  documentType: "CONTRATO_PF" | "PROCURACAO_PF"
+): Promise<{
+  success: boolean;
+  documentType: string;
+  isCustom: boolean;
+  contentHtml: string;
+  message: string;
+}> {
+  return apiFetch("/sales/templates/global/reset", {
+    method: "POST",
+    body: JSON.stringify({ documentType }),
+  });
+}

@@ -25,6 +25,8 @@ const DOC_STATUS_PENDING = (DocumentSignStatus?.PENDING ?? "PENDING") as Documen
 const DOC_STATUS_SIGNED = (DocumentSignStatus?.SIGNED ?? "SIGNED") as DocumentSignStatus;
 const DOC_TYPE_CONTRATO_PF = (DocumentType?.CONTRATO_PF ?? "CONTRATO_PF") as DocumentType;
 const DOC_TYPE_CONTRATO_PJ = (DocumentType?.CONTRATO_PJ ?? "CONTRATO_PJ") as DocumentType;
+const DOC_TYPE_PROCURACAO_PF = (DocumentType?.PROCURACAO_PF ?? "PROCURACAO_PF") as DocumentType;
+const DOC_TYPE_PROCURACAO_PJ = (DocumentType?.PROCURACAO_PJ ?? "PROCURACAO_PJ") as DocumentType;
 
 function formatSaleDocument<T extends Record<string, unknown>>(d: T) {
   return {
@@ -548,7 +550,7 @@ export class SalesService {
       formattedDate,
     });
 
-    const html = this.documentTemplateService.buildDocumentHtml(documentType, data);
+    const html = this.documentTemplateService.buildDocumentHtml(documentType, data, tenant);
     const { pdfBuffer, sha256Hash } = await this.documentTemplateService.generatePdfWithHash(html);
 
     const docTitle =
@@ -634,7 +636,11 @@ export class SalesService {
         formattedDate,
       });
 
-      contentHtml = this.documentTemplateService.buildDocumentHtml(doc.templateType, data);
+      contentHtml = this.documentTemplateService.buildDocumentHtml(
+        doc.templateType,
+        data,
+        doc.sale?.tenant
+      );
     }
 
     return {
@@ -737,6 +743,158 @@ export class SalesService {
     return {
       success: true,
       message: "Minuta excluída com sucesso.",
+    };
+  }
+
+  async getGlobalDocumentTemplates(tenantId: string) {
+    if (!this.documentTemplateService) {
+      throw new NotFoundException("Serviço de geração de documentos não inicializado.");
+    }
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { id: true, name: true, settings: true },
+    });
+
+    if (!tenant) {
+      throw new NotFoundException("Organização não encontrada.");
+    }
+
+    const settings = (tenant.settings as Record<string, unknown>) || {};
+    const customTemplates = (settings["customDocumentTemplates"] as Record<string, string>) || {};
+
+    const defaultContrato =
+      this.documentTemplateService.getFactoryDefaultTemplate(DOC_TYPE_CONTRATO_PF);
+    const defaultProcuracao =
+      this.documentTemplateService.getFactoryDefaultTemplate(DOC_TYPE_PROCURACAO_PF);
+
+    const contratoCustom = customTemplates[DOC_TYPE_CONTRATO_PF];
+    const procuracaoCustom = customTemplates[DOC_TYPE_PROCURACAO_PF];
+
+    return {
+      templates: {
+        CONTRATO_PF: {
+          documentType: DOC_TYPE_CONTRATO_PF,
+          title: "Contrato de Compra e Venda Solar",
+          contentHtml:
+            contratoCustom && contratoCustom.trim().length > 0 ? contratoCustom : defaultContrato,
+          isCustom: Boolean(contratoCustom && contratoCustom.trim().length > 0),
+          factoryDefaultHtml: defaultContrato,
+        },
+        PROCURACAO_PF: {
+          documentType: DOC_TYPE_PROCURACAO_PF,
+          title: "Procuração de Homologação ANEEL",
+          contentHtml:
+            procuracaoCustom && procuracaoCustom.trim().length > 0
+              ? procuracaoCustom
+              : defaultProcuracao,
+          isCustom: Boolean(procuracaoCustom && procuracaoCustom.trim().length > 0),
+          factoryDefaultHtml: defaultProcuracao,
+        },
+      },
+      availableVariables: this.documentTemplateService.getAvailableTemplateVariables(),
+    };
+  }
+
+  async updateGlobalDocumentTemplate(
+    tenantId: string,
+    documentType: DocumentType,
+    contentHtml: string
+  ) {
+    if (!this.documentTemplateService) {
+      throw new NotFoundException("Serviço de geração de documentos não inicializado.");
+    }
+
+    if (!contentHtml || typeof contentHtml !== "string" || !contentHtml.trim()) {
+      throw new BadRequestException("O conteúdo HTML do modelo não pode estar vazio.");
+    }
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { id: true, settings: true },
+    });
+
+    if (!tenant) {
+      throw new NotFoundException("Organização não encontrada.");
+    }
+
+    const currentSettings = (tenant.settings as Record<string, unknown>) || {};
+    const currentCustom =
+      (currentSettings["customDocumentTemplates"] as Record<string, string>) || {};
+
+    const nextCustom = {
+      ...currentCustom,
+      [documentType]: contentHtml,
+    };
+
+    if (documentType === DOC_TYPE_CONTRATO_PF) {
+      nextCustom[DOC_TYPE_CONTRATO_PJ] = contentHtml;
+    } else if (documentType === DOC_TYPE_PROCURACAO_PF) {
+      nextCustom[DOC_TYPE_PROCURACAO_PJ] = contentHtml;
+    }
+
+    const updatedSettings = {
+      ...currentSettings,
+      customDocumentTemplates: nextCustom,
+    };
+
+    await this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: { settings: updatedSettings },
+    });
+
+    return {
+      success: true,
+      documentType,
+      isCustom: true,
+      message: "Modelo padrão global atualizado com sucesso.",
+    };
+  }
+
+  async resetGlobalDocumentTemplate(tenantId: string, documentType: DocumentType) {
+    if (!this.documentTemplateService) {
+      throw new NotFoundException("Serviço de geração de documentos não inicializado.");
+    }
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { id: true, settings: true },
+    });
+
+    if (!tenant) {
+      throw new NotFoundException("Organização não encontrada.");
+    }
+
+    const currentSettings = (tenant.settings as Record<string, unknown>) || {};
+    const currentCustom = {
+      ...((currentSettings["customDocumentTemplates"] as Record<string, string>) || {}),
+    };
+
+    delete currentCustom[documentType];
+    if (documentType === DOC_TYPE_CONTRATO_PF) {
+      delete currentCustom[DOC_TYPE_CONTRATO_PJ];
+    } else if (documentType === DOC_TYPE_PROCURACAO_PF) {
+      delete currentCustom[DOC_TYPE_PROCURACAO_PJ];
+    }
+
+    const updatedSettings = {
+      ...currentSettings,
+      customDocumentTemplates: currentCustom,
+    };
+
+    await this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: { settings: updatedSettings },
+    });
+
+    const factoryDefault = this.documentTemplateService.getFactoryDefaultTemplate(documentType);
+
+    return {
+      success: true,
+      documentType,
+      isCustom: false,
+      contentHtml: factoryDefault,
+      message: "Modelo padrão restaurado para a versão de fábrica com sucesso.",
     };
   }
 }

@@ -13,6 +13,7 @@ import {
   Copy,
   Download,
   FileCheck2,
+  ExternalLink,
   FileEdit,
   FileSignature,
   FileText,
@@ -1860,6 +1861,17 @@ export default function VendaDetailPage(): JSX.Element {
                     cláusulas e textos editados aqui aplicam-se{" "}
                     <strong>exclusivamente ao contrato deste cliente</strong>.
                   </p>
+                  <div className="pt-1 border-t border-[var(--color-border)]/50 mt-1.5 flex items-center justify-between">
+                    <span>Deseja alterar o padrão para os próximos clientes?</span>
+                    <Link
+                      href="/configuracoes/documentos"
+                      target="_blank"
+                      className="inline-flex items-center gap-1 font-semibold text-[var(--color-primary)] hover:underline"
+                    >
+                      <span>Configurar Modelo Padrão</span>
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
@@ -1936,6 +1948,17 @@ export default function VendaDetailPage(): JSX.Element {
                     parágrafos ajustados aqui são aplicados{" "}
                     <strong>apenas para este cliente</strong>.
                   </p>
+                  <div className="pt-1 border-t border-[var(--color-border)]/50 mt-1.5 flex items-center justify-between">
+                    <span>Deseja alterar o padrão para os próximos clientes?</span>
+                    <Link
+                      href="/configuracoes/documentos"
+                      target="_blank"
+                      className="inline-flex items-center gap-1 font-semibold text-[var(--color-primary)] hover:underline"
+                    >
+                      <span>Configurar Modelo Padrão</span>
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
