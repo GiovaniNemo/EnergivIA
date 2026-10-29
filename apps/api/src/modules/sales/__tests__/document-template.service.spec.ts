@@ -117,4 +117,11 @@ describe("DocumentTemplateService", () => {
     expect(variables.some((v) => v.key === "nome_cliente")).toBe(true);
     expect(variables.some((v) => v.key === "valor_total")).toBe(true);
   });
+
+  it("should not contain artificial page-break tags before clauses 5, 9, and 15 in factory default contract", () => {
+    const defaultContract = service.getFactoryDefaultTemplate("CONTRATO_PF");
+    expect(defaultContract).not.toMatch(/<div class="page-break"><\/div>\s*<!-- 5\./);
+    expect(defaultContract).not.toMatch(/<div class="page-break"><\/div>\s*<!-- 9\./);
+    expect(defaultContract).not.toMatch(/<div class="page-break"><\/div>\s*<!-- 15\./);
+  });
 });

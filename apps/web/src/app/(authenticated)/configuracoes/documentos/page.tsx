@@ -22,6 +22,7 @@ import {
   List,
   Loader2,
   ShieldCheck,
+  CheckCircle2,
   X,
 } from "lucide-react";
 import {
@@ -40,6 +41,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
+function assembleFullDocumentHtml(originalHtml: string, bodyInnerHtml: string): string {
+  const headMatch = originalHtml?.match(/<head[\s\S]*?<\/head>/i);
+  const head = headMatch ? headMatch[0] : "<head><meta charset='UTF-8'></head>";
+  const cleanBody = bodyInnerHtml
+    .replace(/<head[\s\S]*?<\/head>/gi, "")
+    .replace(/<\/?(html|body|!DOCTYPE)[^>]*>/gi, "")
+    .trim();
+  return `<!DOCTYPE html>\n<html lang="pt-BR">\n${head}\n<body>\n${cleanBody}\n</body>\n</html>`;
+}
 
 export default function DocumentTemplatesSettingsPage(): JSX.Element {
   const [loading, setLoading] = useState(true);
@@ -124,9 +135,12 @@ export default function DocumentTemplatesSettingsPage(): JSX.Element {
   function switchTab(nextTab: "CONTRATO_PF" | "PROCURACAO_PF") {
     if (nextTab === activeTab) return;
     if (editorRef.current) {
+      const currentBody = editorRef.current.innerHTML;
+      const original = contentMap[activeTab] || "";
+      const full = assembleFullDocumentHtml(original, currentBody);
       setContentMap((prev) => ({
         ...prev,
-        [activeTab]: editorRef.current?.innerHTML || prev[activeTab],
+        [activeTab]: full,
       }));
     }
     setActiveTab(nextTab);
@@ -135,14 +149,8 @@ export default function DocumentTemplatesSettingsPage(): JSX.Element {
   async function handleSave() {
     if (!editorRef.current) return;
     const currentBody = editorRef.current.innerHTML;
-
-    let fullHtml = currentBody;
-    const original = contentMap[activeTab];
-    if (original && original.includes("</body>")) {
-      fullHtml = original.replace(/(<body[^>]*>)([\s\S]*?)(<\/body>)/i, `$1${currentBody}$3`);
-    } else {
-      fullHtml = `<!DOCTYPE html>\n<html lang="pt-BR">\n<head><meta charset="UTF-8"></head>\n<body>${currentBody}</body>\n</html>`;
-    }
+    const original = contentMap[activeTab] || "";
+    const fullHtml = assembleFullDocumentHtml(original, currentBody);
 
     setSaving(true);
     setError(null);
@@ -202,7 +210,7 @@ export default function DocumentTemplatesSettingsPage(): JSX.Element {
     document.execCommand(
       "insertHTML",
       false,
-      '<div class="page-break" contenteditable="false"></div><p><br></p>'
+      '<div class="page-break" title="Clique e pressione Backspace ou Delete para remover esta quebra de página" contenteditable="false"></div><p><br></p>'
     );
     editorRef.current.focus();
   }
@@ -463,9 +471,10 @@ export default function DocumentTemplatesSettingsPage(): JSX.Element {
               type="button"
               onClick={handleInsertPageBreak}
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 transition"
+              title="O documento divide as páginas A4 automaticamente conforme o conteúdo. Use este botão somente se quiser forçar o texto seguinte a começar no topo da próxima página."
             >
               <Scissors className="h-3.5 w-3.5 text-slate-500" />
-              <span>Quebra de Página A4</span>
+              <span>Quebra de Página (Opcional)</span>
             </button>
           </div>
 
@@ -647,20 +656,44 @@ export default function DocumentTemplatesSettingsPage(): JSX.Element {
               text-align: center;
               background: #f8fafc;
               clear: both;
-              user-select: none;
+              user-select: all;
+              cursor: pointer;
+              transition: all 0.2s ease;
             }
             .contract-editor-sheet .page-break::after {
-              content: "✂ QUEBRA DE PÁGINA A4 (INÍCIO DA PRÓXIMA FOLHA)";
+              content: "✂ QUEBRA MANUAL DE PÁGINA (A PRÓXIMA SEÇÃO INICIARÁ NA PRÓXIMA FOLHA A4)";
               display: inline-block;
               background: #0f172a;
               color: #ffffff;
               font-size: 8px;
               font-weight: 700;
-              padding: 2px 10px;
+              padding: 3px 12px;
               border-radius: 999px;
               letter-spacing: 0.5px;
             }
+            .contract-editor-sheet .page-break:hover {
+              background: #fee2e2;
+              border-top-color: #ef4444;
+            }
+            .contract-editor-sheet .page-break:hover::after {
+              content: "✂ REMOVER QUEBRA MANUAL (CLIQUE E APAGUE COM BACKSPACE OU DELETE)";
+              background: #dc2626;
+            }
           `}</style>
+
+            <div className="w-full max-w-[850px] mb-2 px-4 py-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 text-xs text-emerald-800 dark:text-emerald-300 flex items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>
+                  <strong>Paginação A4 Contínua:</strong> O documento ajusta e distribui as
+                  cláusulas e tabelas de equipamentos automaticamente nas folhas A4, eliminando
+                  lacunas em branco desnecessárias.
+                </span>
+              </div>
+              <span className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 hidden sm:inline shrink-0">
+                Quebras manuais são opcionais
+              </span>
+            </div>
 
             <div className="w-full max-w-[850px] min-h-[1123px] h-fit shrink-0 bg-white rounded-lg shadow-xl border border-slate-300 p-8 sm:p-14 contract-editor-sheet my-4">
               <div

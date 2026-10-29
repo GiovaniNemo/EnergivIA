@@ -245,8 +245,6 @@ export const CONTRACT_PF_TEMPLATE = `<!DOCTYPE html>
     4.3. Na hipótese de descontinuidade fabril ou falta temporária de algum item no distribuidor, a CONTRATADA poderá substituí-lo por outro de tecnologia, potência, eficiência e garantia iguais ou superiores, sem qualquer custo adicional para o(a) CONTRATANTE, mediante comunicação prévia.
   </p>
 
-  <div class="page-break"></div>
-
   <!-- 5. DO VALOR E FORMA DE PAGAMENTO -->
   <div class="section-title">5. DO VALOR E CONDIÇÕES DE PAGAMENTO</div>
   <p>
@@ -299,8 +297,6 @@ export const CONTRACT_PF_TEMPLATE = `<!DOCTYPE html>
     <li><strong>Conectividade Wi-Fi:</strong> Disponibilizar no ponto do inversor rede de internet Wi-Fi estável na frequência de 2.4 GHz com sinal adequado para o monitoramento eletrônico do sistema. A perda de conexão ou alteração de senha de internet do imóvel não interrompe a geração elétrica e isenta a CONTRATADA de perdas em relatórios do aplicativo;</li>
     <li>Não intervir nem permitir que terceiros não autorizados mexam nos equipamentos instalados durante a vigência da garantia, sob pena de perda imediata da garantia de instalação.</li>
   </ul>
-
-  <div class="page-break"></div>
 
   <!-- 9. DO REGIME DE GARANTIAS -->
   <div class="section-title">9. DO REGIME DE GARANTIAS E ASSISTÊNCIA TÉCNICA</div>
@@ -356,8 +352,6 @@ export const CONTRACT_PF_TEMPLATE = `<!DOCTYPE html>
   <p>
     14.1. Nenhuma das partes responderá por atrasos decorrentes de eventos caracterizados como caso fortuito ou força maior, nos termos do Artigo 393 do Código Civil Brasileiro, devendo a ocorrência ser comunicada formalmente no prazo de 48 (quarenta e oito) horas.
   </p>
-
-  <div class="page-break"></div>
 
   <!-- 15. CLÁUSULAS ADICIONAIS DO INTEGRADOR -->
   {{bloco_clausulas_personalizadas}}

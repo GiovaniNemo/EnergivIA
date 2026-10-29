@@ -29,6 +29,16 @@ interface LiveContractEditorModalProps {
   onSaved?: () => void;
 }
 
+function assembleFullDocumentHtml(originalHtml: string, bodyInnerHtml: string): string {
+  const headMatch = originalHtml?.match(/<head[\s\S]*?<\/head>/i);
+  const head = headMatch ? headMatch[0] : "<head><meta charset='UTF-8'></head>";
+  const cleanBody = bodyInnerHtml
+    .replace(/<head[\s\S]*?<\/head>/gi, "")
+    .replace(/<\/?(html|body|!DOCTYPE)[^>]*>/gi, "")
+    .trim();
+  return `<!DOCTYPE html>\n<html lang="pt-BR">\n${head}\n<body>\n${cleanBody}\n</body>\n</html>`;
+}
+
 export function LiveContractEditorModal({
   saleId,
   docId,
@@ -115,15 +125,7 @@ export function LiveContractEditorModal({
     if (!editorRef.current || !docData || docData.isSigned) return;
 
     const updatedBody = editorRef.current.innerHTML;
-    let fullHtml = updatedBody;
-    if (docData.contentHtml && docData.contentHtml.includes("</body>")) {
-      fullHtml = docData.contentHtml.replace(
-        /(<body[^>]*>)([\s\S]*?)(<\/body>)/i,
-        `$1${updatedBody}$3`
-      );
-    } else {
-      fullHtml = `<!DOCTYPE html>\n<html lang="pt-BR">\n<head><meta charset="UTF-8"></head>\n<body>${updatedBody}</body>\n</html>`;
-    }
+    const fullHtml = assembleFullDocumentHtml(docData.contentHtml || "", updatedBody);
 
     setSaving(true);
     setError(null);
@@ -155,7 +157,7 @@ export function LiveContractEditorModal({
     document.execCommand(
       "insertHTML",
       false,
-      '<div class="page-break" contenteditable="false"></div><p><br></p>'
+      '<div class="page-break" title="Clique e pressione Backspace ou Delete para remover esta quebra de página" contenteditable="false"></div><p><br></p>'
     );
     editorRef.current.focus();
   }
@@ -352,10 +354,12 @@ export function LiveContractEditorModal({
           text-align: center;
           background: #f8fafc;
           clear: both;
-          user-select: none;
+          user-select: all;
+          cursor: pointer;
+          transition: all 0.2s ease;
         }
         .contract-editor-sheet .page-break::after {
-          content: "✂ QUEBRA DE PÁGINA A4 (INÍCIO DA PRÓXIMA FOLHA)";
+          content: "✂ QUEBRA MANUAL DE PÁGINA (A PRÓXIMA SEÇÃO INICIARÁ NA PRÓXIMA FOLHA A4)";
           display: inline-block;
           background: #0f172a;
           color: #ffffff;
@@ -365,6 +369,14 @@ export function LiveContractEditorModal({
           padding: 3px 12px;
           border-radius: 9999px;
           box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .contract-editor-sheet .page-break:hover {
+          background: #fee2e2;
+          border-top-color: #ef4444;
+        }
+        .contract-editor-sheet .page-break:hover::after {
+          content: "✂ REMOVER QUEBRA MANUAL (CLIQUE E APAGUE COM BACKSPACE OU DELETE)";
+          background: #dc2626;
         }
       `}</style>
 
@@ -446,10 +458,10 @@ export function LiveContractEditorModal({
             <button
               onClick={handleInsertPageBreak}
               className="inline-flex items-center gap-1.5 rounded bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition"
-              title="Inserir quebra de página A4"
+              title="O documento divide as páginas A4 automaticamente conforme o conteúdo. Use este botão somente se quiser forçar o texto seguinte a começar no topo da próxima página."
             >
               <Scissors className="h-3.5 w-3.5 text-emerald-600" />
-              <span>Quebra de Página</span>
+              <span>Quebra de Página (Opcional)</span>
             </button>
           </div>
         )}

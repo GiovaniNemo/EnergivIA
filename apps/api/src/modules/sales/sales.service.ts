@@ -885,16 +885,31 @@ export class SalesService {
       );
     }
 
-    let finalHtml = contentHtml.trim();
-    if (!finalHtml.toLowerCase().includes("<html") || !finalHtml.toLowerCase().includes("<head")) {
-      const template = String(doc.templateType).startsWith("CONTRATO")
-        ? CONTRACT_PF_TEMPLATE
-        : POWER_OF_ATTORNEY_PF_TEMPLATE;
-      const headMatch = template.match(/<head[\s\S]*?<\/head>/i);
-      const headHtml = headMatch ? headMatch[0] : "<head><meta charset='UTF-8'></head>";
-      const cleanBody = finalHtml.replace(/<\/?(html|body|!DOCTYPE)[^>]*>/gi, "").trim();
-      finalHtml = `<!DOCTYPE html>\n<html lang="pt-BR">\n${headHtml}\n<body>\n${cleanBody}\n</body>\n</html>`;
-    }
+    const template = String(doc.templateType).startsWith("CONTRATO")
+      ? CONTRACT_PF_TEMPLATE
+      : POWER_OF_ATTORNEY_PF_TEMPLATE;
+    const headMatch = template.match(/<head[\s\S]*?<\/head>/i);
+    const headHtml = headMatch ? headMatch[0] : "<head><meta charset='UTF-8'></head>";
+    let cleanBody = contentHtml
+      .replace(/<head[\s\S]*?<\/head>/gi, "")
+      .replace(/<\/?(html|body|!DOCTYPE)[^>]*>/gi, "")
+      .trim();
+
+    cleanBody = cleanBody
+      .replace(
+        /<div class="page-break"[^>]*><\/div>\s*(?=(?:<!--\s*5\.|<div class="section-title">\s*5\.))/gi,
+        ""
+      )
+      .replace(
+        /<div class="page-break"[^>]*><\/div>\s*(?=(?:<!--\s*9\.|<div class="section-title">\s*9\.))/gi,
+        ""
+      )
+      .replace(
+        /<div class="page-break"[^>]*><\/div>\s*(?=(?:<!--\s*15\.|<div class="section-title">\s*15\.))/gi,
+        ""
+      );
+
+    const finalHtml = `<!DOCTYPE html>\n<html lang="pt-BR">\n${headHtml}\n<body>\n${cleanBody}\n</body>\n</html>`;
 
     const { pdfBuffer, sha256Hash } =
       await this.documentTemplateService.generatePdfWithHash(finalHtml);
@@ -1022,15 +1037,40 @@ export class SalesService {
     const currentCustom =
       (currentSettings["customDocumentTemplates"] as Record<string, string>) || {};
 
+    const factoryDefault = this.documentTemplateService.getFactoryDefaultTemplate(documentType);
+    const headMatch = factoryDefault.match(/<head[\s\S]*?<\/head>/i);
+    const headHtml = headMatch ? headMatch[0] : "<head><meta charset='UTF-8'></head>";
+
+    let cleanBody = contentHtml
+      .replace(/<head[\s\S]*?<\/head>/gi, "")
+      .replace(/<\/?(html|body|!DOCTYPE)[^>]*>/gi, "")
+      .trim();
+
+    cleanBody = cleanBody
+      .replace(
+        /<div class="page-break"[^>]*><\/div>\s*(?=(?:<!--\s*5\.|<div class="section-title">\s*5\.))/gi,
+        ""
+      )
+      .replace(
+        /<div class="page-break"[^>]*><\/div>\s*(?=(?:<!--\s*9\.|<div class="section-title">\s*9\.))/gi,
+        ""
+      )
+      .replace(
+        /<div class="page-break"[^>]*><\/div>\s*(?=(?:<!--\s*15\.|<div class="section-title">\s*15\.))/gi,
+        ""
+      );
+
+    const normalizedHtml = `<!DOCTYPE html>\n<html lang="pt-BR">\n${headHtml}\n<body>\n${cleanBody}\n</body>\n</html>`;
+
     const nextCustom = {
       ...currentCustom,
-      [documentType]: contentHtml,
+      [documentType]: normalizedHtml,
     };
 
     if (documentType === DOC_TYPE_CONTRATO_PF) {
-      nextCustom[DOC_TYPE_CONTRATO_PJ] = contentHtml;
+      nextCustom[DOC_TYPE_CONTRATO_PJ] = normalizedHtml;
     } else if (documentType === DOC_TYPE_PROCURACAO_PF) {
-      nextCustom[DOC_TYPE_PROCURACAO_PJ] = contentHtml;
+      nextCustom[DOC_TYPE_PROCURACAO_PJ] = normalizedHtml;
     }
 
     const updatedSettings = {

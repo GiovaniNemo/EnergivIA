@@ -580,21 +580,20 @@ export class SignatureAuditService {
         .replace(/<\/?(html|body|!DOCTYPE)[^>]*>/gi, "")
         .trim();
 
-      // Injetar quebras de página naturais em documentos gerados anteriormente
-      if (!cleanBody.includes('class="page-break"')) {
-        cleanBody = cleanBody.replace(
-          /(<!-- 5\. DO VALOR|<div class="section-title">5\. DO VALOR)/i,
-          '<div class="page-break"></div>\n$1'
+      // Limpar quebras artificiais rígidas legadas antes das cláusulas 5, 9 e 15 que deixavam 70% da folha em branco
+      cleanBody = cleanBody
+        .replace(
+          /<div class="page-break"[^>]*><\/div>\s*(?=(?:<!--\s*5\.|<div class="section-title">\s*5\.))/gi,
+          ""
+        )
+        .replace(
+          /<div class="page-break"[^>]*><\/div>\s*(?=(?:<!--\s*9\.|<div class="section-title">\s*9\.))/gi,
+          ""
+        )
+        .replace(
+          /<div class="page-break"[^>]*><\/div>\s*(?=(?:<!--\s*15\.|<div class="section-title">\s*15\.))/gi,
+          ""
         );
-        cleanBody = cleanBody.replace(
-          /(<!-- 9\. DO REGIME|<div class="section-title">9\. DO REGIME)/i,
-          '<div class="page-break"></div>\n$1'
-        );
-        cleanBody = cleanBody.replace(
-          /(<!-- 15\. CLÁUSULAS|<div class="section-title">15\. DAS CONDIÇÕES)/i,
-          '<div class="page-break"></div>\n$1'
-        );
-      }
 
       customHtml = `<!DOCTYPE html>\n<html lang="pt-BR">\n${headHtml}\n<body>\n${cleanBody}\n</body>\n</html>`;
       if (clientSignatureBlock) {
@@ -603,20 +602,35 @@ export class SignatureAuditService {
             /\{\{bloco_assinatura_cliente\}\}/g,
             clientSignatureBlock
           );
-        } else {
-          customHtml = customHtml.replace(
-            /(<\/body>|$)/i,
-            `<div style="margin-top: 20px;">${clientSignatureBlock}</div>$1`
-          );
+        } else if (
+          !customHtml.includes("✓ Assinado em") &&
+          !customHtml.includes("Rubrica Capturada Digitalmente")
+        ) {
+          // Se houver a caixa de "Aguardando Assinatura", substituir no local exato para evitar duplicação no rodapé
+          const waitingBoxRegex =
+            /<div style="[^"]*border:\s*1px dashed #94a3b8[^"]*">[\s\S]*?Aguardando Assinatura Eletrônica[\s\S]*?<\/div>\s*<\/div>/i;
+          if (waitingBoxRegex.test(customHtml)) {
+            customHtml = customHtml.replace(waitingBoxRegex, clientSignatureBlock);
+          } else {
+            customHtml = customHtml.replace(
+              /(<\/body>|$)/i,
+              `<div style="margin-top: 20px;">${clientSignatureBlock}</div>$1`
+            );
+          }
         }
       }
       if (auditSheetHtml) {
         if (customHtml.includes("{{folha_auditoria_anexa}}")) {
           customHtml = customHtml.replace(/\{\{folha_auditoria_anexa\}\}/g, auditSheetHtml);
-        } else if (customHtml.includes("</body>")) {
-          customHtml = customHtml.replace("</body>", `${auditSheetHtml}</body>`);
-        } else {
-          customHtml += auditSheetHtml;
+        } else if (
+          !customHtml.includes("Certificado de Assinatura Eletrônica") &&
+          !customHtml.includes("Trilha de Auditoria")
+        ) {
+          if (customHtml.includes("</body>")) {
+            customHtml = customHtml.replace("</body>", `${auditSheetHtml}</body>`);
+          } else {
+            customHtml += auditSheetHtml;
+          }
         }
       }
       return customHtml;

@@ -460,8 +460,8 @@ describe("SalesService", () => {
           data: {
             settings: {
               customDocumentTemplates: {
-                CONTRATO_PF: "<html>Novo Modelo Global</html>",
-                CONTRATO_PJ: "<html>Novo Modelo Global</html>",
+                CONTRATO_PF: expect.stringContaining("Novo Modelo Global"),
+                CONTRATO_PJ: expect.stringContaining("Novo Modelo Global"),
               },
             },
           },

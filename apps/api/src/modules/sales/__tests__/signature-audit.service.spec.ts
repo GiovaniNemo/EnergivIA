@@ -271,5 +271,40 @@ describe("SignatureAuditService", () => {
       expect(generatedHtml).toContain("Cláusula 10: Condição Especial");
       expect(generatedHtml).toContain("data:image/png;base64,mockSign");
     });
+
+    it("should clean legacy artificial page breaks and not duplicate audit sheets or signatures", async () => {
+      const legacyHtml = `<!DOCTYPE html><html><body><h1>Contrato</h1><div class="page-break"></div><!-- 5. DO VALOR --><h2>5. DO VALOR</h2><div style="border: 1px dashed #94a3b8; background: #ffffff; border-radius: 6px; padding: 8px; text-align: center;"><div style="font-size: 7.5pt; font-weight: 600; color: #64748b; text-transform: uppercase;">Aguardando Assinatura Eletrônica</div><div style="font-size: 7pt; color: #94a3b8; margin-top: 2px;">Validação em 2 etapas via OTP por e-mail</div></div></body></html>`;
+      const mockDoc = {
+        id: "doc-legacy",
+        saleId: "sale-legacy",
+        title: "Contrato Legado",
+        templateType: "CONTRATO_PF",
+        status: "PENDING",
+        contentHtml: legacyHtml,
+        sale: { id: "sale-legacy", customerType: "PF", documentNumber: "123" },
+      };
+
+      const fullHtml = await service.buildFullDocumentHtml(mockDoc as any, {
+        isSigned: true,
+        signerName: "Signatario Teste",
+        signerCpf: "123.456.789-00",
+        signerEmail: "teste@exemplo.com",
+        signerIp: "127.0.0.1",
+        signerUserAgent: "Browser",
+        friendlyUserAgent: "Chrome",
+        signedAt: new Date(),
+        signatureHash: "hash-12345",
+        signatureImage: "data:image/png;base64,assinatura",
+      });
+
+      // Must clean the legacy page break before clause 5
+      expect(fullHtml).not.toMatch(/<div class="page-break"[^>]*><\/div>\s*<!--\s*5\./);
+      // Must replace the waiting box instead of appending at the bottom
+      expect(fullHtml).toContain("data:image/png;base64,assinatura");
+      expect(fullHtml).not.toContain("Aguardando Assinatura Eletrônica");
+      // Must contain exactly 1 audit sheet
+      const auditMatches = fullHtml.match(/Certificado de Assinatura Eletrônica/g);
+      expect(auditMatches?.length).toBe(1);
+    });
   });
 });
