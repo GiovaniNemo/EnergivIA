@@ -256,9 +256,9 @@ export default function DocumentTemplatesSettingsPage(): JSX.Element {
             Modelos de Contratos & Documentos
           </h1>
           <p className="text-xs sm:text-sm text-[var(--color-muted-foreground)] max-w-3xl">
-            Edite e personalize o modelo padrão oficial da sua integradora. Todas as alterações
-            salvas aqui serão aplicadas automaticamente aos{" "}
-            <strong>novos contratos e procurações</strong> gerados para os seus futuros clientes.
+            Edite e personalize o modelo padrão oficial da sua empresa. Todas as alterações salvas
+            aqui serão aplicadas automaticamente aos <strong>novos contratos e procurações</strong>{" "}
+            gerados para os seus futuros clientes.
           </p>
         </div>
 

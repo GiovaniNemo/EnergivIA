@@ -890,7 +890,9 @@ export default function VendaDetailPage(): JSX.Element {
                     }));
                     setCnpjFeedback(null);
                   }}
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                  autoComplete="off"
+                  data-lpignore="true"
+                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-white dark:bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
                 >
                   <option value="PF">Pessoa Física (PF)</option>
                   <option value="PJ">Pessoa Jurídica (PJ)</option>
@@ -1184,6 +1186,8 @@ export default function VendaDetailPage(): JSX.Element {
                 <input
                   id="field-customerEmail"
                   type="email"
+                  autoComplete="off"
+                  data-lpignore="true"
                   value={formData.customerEmail}
                   onChange={(e) => {
                     setFormData((prev) => ({ ...prev, customerEmail: e.target.value }));
@@ -1191,7 +1195,7 @@ export default function VendaDetailPage(): JSX.Element {
                   }}
                   placeholder="cliente@email.com"
                   className={cn(
-                    "mt-1 w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                    "mt-1 w-full rounded-lg border bg-white dark:bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
                     fieldErrors.customerEmail
                       ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
                       : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
@@ -1653,6 +1657,8 @@ export default function VendaDetailPage(): JSX.Element {
                 <input
                   id="field-ucNumber"
                   type="text"
+                  autoComplete="off"
+                  data-lpignore="true"
                   value={formData.ucNumber}
                   onChange={(e) => {
                     setFormData((prev) => ({ ...prev, ucNumber: e.target.value }));
@@ -1660,7 +1666,7 @@ export default function VendaDetailPage(): JSX.Element {
                   }}
                   placeholder="Ex: 3001234567"
                   className={cn(
-                    "mt-1 h-[38px] w-full rounded-lg border bg-[var(--color-background)] px-3 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                    "mt-1 h-[38px] w-full rounded-lg border bg-white dark:bg-[var(--color-background)] px-3 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
                     fieldErrors.ucNumber
                       ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
                       : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
@@ -2366,8 +2372,8 @@ export default function VendaDetailPage(): JSX.Element {
                     Brasília.
                   </li>
                   <li>
-                    <strong>Folha de Auditoria Jurídica Anexa:</strong> O PDF assinado é emitido com
-                    a folha de auditoria e certificado digital anexos na última página.
+                    <strong>Certificado de Autenticidade:</strong> O PDF assinado é emitido com
+                    certificado digital e carimbo oficial de autenticidade.
                   </li>
                 </ul>
               </div>

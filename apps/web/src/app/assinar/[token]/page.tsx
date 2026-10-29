@@ -659,13 +659,12 @@ export default function PublicSignDocumentPage(): JSX.Element {
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-8 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-emerald-700"
               >
                 <Download className="h-4 w-4" />
-                Baixar Documento Assinado com Folha de Auditoria (PDF)
+                Baixar Documento Assinado (PDF)
               </a>
             </div>
 
             <p className="text-[11px] text-slate-400">
-              Uma cópia deste arquivo e sua respectiva folha de auditoria e conformidade legal
-              permanecem arquivados com segurança na plataforma.
+              Uma cópia deste documento assinado permanece arquivada com segurança na plataforma.
             </p>
           </div>
         )}
