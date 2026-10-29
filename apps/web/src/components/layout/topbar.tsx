@@ -232,7 +232,7 @@ export function Topbar() {
         <button
           type="button"
           onClick={() => setMobileSearchOpen(true)}
-          className="hidden sm:inline-flex xl:hidden items-center gap-1.5 h-9 px-2.5 rounded-xl border border-black/[0.08] dark:border-white/15 bg-white/40 dark:bg-white/[0.06] hover:bg-white/60 dark:hover:bg-white/[0.12] backdrop-blur-md text-xs text-[var(--color-foreground)] hover:border-black/15 dark:hover:border-emerald-400/40 shadow-xs transition-all shrink-0"
+          className="hidden sm:inline-flex xl:hidden items-center gap-1.5 h-9 px-2.5 rounded-xl border border-black/[0.08] dark:border-white/10 bg-black/[0.03] dark:bg-[#02040a]/60 text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.06] dark:hover:border-emerald-500/30 transition-all shrink-0"
           title="Pesquisar (⌘K / Ctrl+K)"
         >
           <Search className="h-3.5 w-3.5 shrink-0" />
@@ -253,7 +253,7 @@ export function Topbar() {
         {/* Mobile Search Button (phone only) */}
         <button
           type="button"
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-black/[0.08] dark:border-white/15 bg-white/40 dark:bg-white/[0.06] hover:bg-white/60 dark:hover:bg-white/[0.12] backdrop-blur-md text-[var(--color-foreground)] hover:border-black/15 dark:hover:border-emerald-400/40 shadow-xs transition-all sm:hidden"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-black/[0.08] dark:border-white/10 bg-black/[0.03] dark:bg-[#02040a]/60 text-[var(--color-muted-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.06] dark:hover:border-emerald-500/30 hover:text-[var(--color-foreground)] transition-all sm:hidden"
           onClick={() => setMobileSearchOpen(true)}
           aria-label="Abrir pesquisa"
         >
@@ -321,7 +321,7 @@ export function Topbar() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 shrink-0 rounded-xl border border-black/[0.08] dark:border-white/15 bg-white/40 dark:bg-white/[0.06] hover:bg-white/60 dark:hover:bg-white/[0.12] backdrop-blur-md text-[var(--color-foreground)] hover:border-black/15 dark:hover:border-emerald-400/40 shadow-xs transition-all duration-150"
+          className="h-9 w-9 shrink-0 rounded-xl border border-black/[0.08] dark:border-white/10 bg-black/[0.03] dark:bg-[#02040a]/60 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.06] dark:hover:bg-white/[0.06] hover:border-black/15 dark:hover:border-emerald-500/30 transition-all duration-150"
           onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
           aria-label="Alternar tema"
         >

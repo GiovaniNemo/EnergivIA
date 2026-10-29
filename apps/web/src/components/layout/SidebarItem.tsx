@@ -52,16 +52,16 @@ export function SidebarItem({
         disabled
           ? "text-slate-500/50 dark:text-slate-500/50 opacity-50 cursor-not-allowed hover:bg-transparent bg-black/5 dark:bg-black/20"
           : active
-            ? "bg-emerald-500/25 text-emerald-950 dark:text-emerald-100 font-bold border border-emerald-400/50 dark:border-emerald-400/40 shadow-[0_0_20px_-2px_rgba(16,185,129,0.35)] backdrop-blur-md"
-            : "text-slate-700 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white hover:bg-white/30 dark:hover:bg-white/10 hover:border-white/40 dark:hover:border-white/15 hover:shadow-[0_4px_16px_rgba(255,255,255,0.08)] backdrop-blur-xs border border-transparent"
+            ? "bg-emerald-500/20 text-emerald-700 dark:bg-emerald-500/25 dark:text-emerald-200 font-semibold border border-emerald-500/35 shadow-[0_0_15px_-3px_rgba(16,185,129,0.25)]"
+            : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-emerald-500/10 dark:hover:bg-emerald-500/15 hover:border-emerald-500/20 border border-transparent"
       )}
     >
       <Icon
         className={cn(
           "h-[1.15rem] w-[1.15rem] shrink-0 transition-all duration-200 group-hover:scale-105",
           active
-            ? "text-emerald-600 dark:text-emerald-300 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]"
-            : "text-slate-600 dark:text-slate-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors"
+            ? "text-emerald-600 dark:text-emerald-400"
+            : "text-slate-500 dark:text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors"
         )}
       />
       {!collapsed ? (
