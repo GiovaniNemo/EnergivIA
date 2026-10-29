@@ -39,29 +39,34 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
               {!isFullscreenView && <FeedbackPromptCard />}
               {!isFullscreenView && <EnergiviaFloatingHub />}
 
-              {/* Fundo Atmosférico Contínuo para Glassmorphism (Preenchimento Integral sem quebras) */}
+              {/* Fundo Atmosférico Contínuo para Glassmorphism (Vibrant Frosted Orbs estilo referência) */}
               <div
                 className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
                 aria-hidden="true"
               >
-                {/* Camada 1: Aura esmeralda expansiva no topo e centro */}
+                {/* Esfera 1: Esfera luminosa de topo/esquerda atrás da logo e sidebar */}
                 <div
-                  className="absolute -top-32 left-1/2 -translate-x-1/2 h-[700px] w-full max-w-[1500px] rounded-full bg-[radial-gradient(ellipse_75%_65%_at_50%_20%,rgba(16,185,129,0.12)_0%,rgba(16,185,129,0.03)_50%,transparent_80%)] dark:bg-[radial-gradient(ellipse_75%_65%_at_50%_20%,rgba(16,185,129,0.14)_0%,rgba(16,185,129,0.03)_50%,transparent_80%)]"
+                  className="absolute -top-24 -left-20 h-[650px] w-[650px] rounded-full blur-[110px] bg-[radial-gradient(circle_at_center,rgba(52,211,153,0.32)_0%,rgba(16,185,129,0.16)_40%,transparent_70%)] dark:bg-[radial-gradient(circle_at_center,rgba(52,211,153,0.24)_0%,rgba(16,185,129,0.12)_40%,transparent_70%)]"
                   style={{ contain: "strict" }}
                 />
-                {/* Camada 2: Luz suave teal/safira na lateral direita e base */}
+                {/* Esfera 2: Esfera ciano/teal suave na lateral da sidebar */}
                 <div
-                  className="absolute -bottom-20 right-0 h-[750px] w-[850px] rounded-full bg-[radial-gradient(ellipse_65%_60%_at_60%_60%,rgba(20,184,166,0.08)_0%,rgba(56,189,248,0.02)_55%,transparent_80%)] dark:bg-[radial-gradient(ellipse_65%_60%_at_60%_60%,rgba(14,116,144,0.10)_0%,rgba(16,185,129,0.03)_50%,transparent_80%)]"
+                  className="absolute top-[32%] -left-28 h-[600px] w-[550px] rounded-full blur-[120px] bg-[radial-gradient(circle_at_center,rgba(45,212,191,0.26)_0%,rgba(6,182,212,0.12)_45%,transparent_70%)] dark:bg-[radial-gradient(circle_at_center,rgba(45,212,191,0.18)_0%,rgba(6,182,212,0.08)_45%,transparent_70%)]"
                   style={{ contain: "strict" }}
                 />
-                {/* Camada 3: Luz de apoio na lateral esquerda atrás da sidebar */}
+                {/* Esfera 3: Aurora expansiva periwinkle/esmeralda no topo atrás da topbar */}
                 <div
-                  className="absolute top-16 -left-20 h-[900px] w-[500px] rounded-full bg-[radial-gradient(ellipse_60%_60%_at_30%_40%,rgba(16,185,129,0.12)_0%,rgba(20,184,166,0.04)_50%,transparent_75%)] dark:bg-[radial-gradient(ellipse_60%_60%_at_30%_40%,rgba(16,185,129,0.18)_0%,rgba(20,184,166,0.06)_50%,transparent_75%)]"
+                  className="absolute -top-36 left-1/2 -translate-x-1/2 h-[520px] w-[950px] rounded-full blur-[130px] bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.16)_0%,rgba(16,185,129,0.14)_45%,transparent_75%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.12)_0%,rgba(16,185,129,0.10)_45%,transparent_75%)]"
                   style={{ contain: "strict" }}
                 />
-                {/* Camada 4: Micro-textura arquitetônica 100% contínua (sem corte de máscara elíptica) */}
+                {/* Esfera 4: Bloom ciano/safira suave na base direita */}
                 <div
-                  className="absolute inset-0 opacity-[0.03] dark:opacity-[0.055] bg-[radial-gradient(rgba(0,0,0,0.8)_1px,transparent_1px)] dark:bg-[radial-gradient(rgba(255,255,255,0.9)_1px,transparent_1px)] [background-size:24px_24px]"
+                  className="absolute -bottom-24 -right-24 h-[750px] w-[750px] rounded-full blur-[140px] bg-[radial-gradient(circle_at_center,rgba(20,184,166,0.20)_0%,rgba(56,189,248,0.09)_50%,transparent_75%)] dark:bg-[radial-gradient(circle_at_center,rgba(20,184,166,0.15)_0%,rgba(56,189,248,0.06)_50%,transparent_75%)]"
+                  style={{ contain: "strict" }}
+                />
+                {/* Camada 5: Micro-textura arquitetônica 100% contínua */}
+                <div
+                  className="absolute inset-0 opacity-[0.03] dark:opacity-[0.045] bg-[radial-gradient(rgba(0,0,0,0.8)_1px,transparent_1px)] dark:bg-[radial-gradient(rgba(255,255,255,0.9)_1px,transparent_1px)] [background-size:24px_24px]"
                   style={{ contain: "strict" }}
                 />
               </div>
