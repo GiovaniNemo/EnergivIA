@@ -407,94 +407,112 @@ export default function DocumentTemplatesSettingsPage(): JSX.Element {
         </div>
       </div>
 
-      {/* Barra de Ferramentas de Formatação WYSIWYG */}
-      <div className="sticky top-16 z-30 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)]/95 backdrop-blur-md px-3 py-2 shadow-sm">
-        <div className="flex flex-wrap items-center gap-1">
-          <button
-            type="button"
-            title="Negrito (Ctrl+B)"
-            onClick={() => handleFormat("bold")}
-            className="rounded p-1.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 transition"
-          >
-            <Bold className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            title="Itálico (Ctrl+I)"
-            onClick={() => handleFormat("italic")}
-            className="rounded p-1.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 transition"
-          >
-            <Italic className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            title="Sublinhado (Ctrl+U)"
-            onClick={() => handleFormat("underline")}
-            className="rounded p-1.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 transition"
-          >
-            <UnderlineIcon className="h-4 w-4" />
-          </button>
+      {/* Container Unificado do Editor: Barra Fixa no Topo e Canvas de Rolagem */}
+      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-md overflow-hidden flex flex-col">
+        {/* Barra de Ferramentas Fixa no Topo do Editor */}
+        <div className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] bg-[var(--color-card)]/95 backdrop-blur-md px-3 sm:px-4 py-2.5 shadow-sm">
+          <div className="flex flex-wrap items-center gap-1">
+            <button
+              type="button"
+              title="Negrito (Ctrl+B)"
+              onClick={() => handleFormat("bold")}
+              className="rounded p-1.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 transition"
+            >
+              <Bold className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              title="Itálico (Ctrl+I)"
+              onClick={() => handleFormat("italic")}
+              className="rounded p-1.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 transition"
+            >
+              <Italic className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              title="Sublinhado (Ctrl+U)"
+              onClick={() => handleFormat("underline")}
+              className="rounded p-1.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 transition"
+            >
+              <UnderlineIcon className="h-4 w-4" />
+            </button>
 
-          <div className="h-4 w-[1px] bg-slate-300 dark:bg-slate-700 mx-1" />
+            <div className="h-4 w-[1px] bg-slate-300 dark:bg-slate-700 mx-1" />
 
-          <button
-            type="button"
-            title="Lista com Marcadores"
-            onClick={() => handleFormat("insertUnorderedList")}
-            className="rounded p-1.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 transition"
-          >
-            <List className="h-4 w-4" />
-          </button>
+            <button
+              type="button"
+              title="Lista com Marcadores"
+              onClick={() => handleFormat("insertUnorderedList")}
+              className="rounded p-1.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 transition"
+            >
+              <List className="h-4 w-4" />
+            </button>
 
-          <div className="h-4 w-[1px] bg-slate-300 dark:bg-slate-700 mx-1" />
+            <div className="h-4 w-[1px] bg-slate-300 dark:bg-slate-700 mx-1" />
 
-          <button
-            type="button"
-            onClick={handleInsertClause}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600/30 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-300 transition"
-          >
-            <PlusCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span>+ Nova Cláusula</span>
-          </button>
+            <button
+              type="button"
+              onClick={handleInsertClause}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600/30 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-300 transition"
+            >
+              <PlusCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>+ Nova Cláusula</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={handleInsertPageBreak}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 transition"
-          >
-            <Scissors className="h-3.5 w-3.5 text-slate-500" />
-            <span>Quebra de Página A4</span>
-          </button>
+            <button
+              type="button"
+              onClick={handleInsertPageBreak}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 transition"
+            >
+              <Scissors className="h-3.5 w-3.5 text-slate-500" />
+              <span>Quebra de Página A4</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-[var(--color-muted-foreground)] hidden lg:inline">
+              Dica: use <strong>Ctrl+S</strong> para salvar a qualquer momento.
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowVariablesDrawer(true)}
+              className="text-xs h-8 gap-1 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>Ver Tags Dinâmicas</span>
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleSave}
+              disabled={saving || loading}
+              className="h-8 gap-1.5 bg-[var(--color-primary)] text-white hover:opacity-95 text-xs px-3 font-semibold shadow-sm"
+            >
+              {saving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : saveSuccess ? (
+                <Check className="h-3.5 w-3.5" />
+              ) : (
+                <Save className="h-3.5 w-3.5" />
+              )}
+              <span>{saving ? "Salvando..." : saveSuccess ? "Salvo!" : "Salvar"}</span>
+            </Button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] text-[var(--color-muted-foreground)] hidden md:inline">
-            Dica: use <strong>Ctrl+S</strong> para salvar a qualquer momento.
-          </span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowVariablesDrawer(true)}
-            className="text-xs h-8 gap-1 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10"
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Ver Tags Dinâmicas</span>
-          </Button>
-        </div>
-      </div>
-
-      {/* Área da Folha A4 de Edição */}
-      {loading ? (
-        <div className="flex flex-col items-center justify-center p-16 space-y-3 bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)]">
-          <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary)]" />
-          <p className="text-xs text-[var(--color-muted-foreground)]">
-            Carregando modelo oficial da empresa...
-          </p>
-        </div>
-      ) : (
-        <div className="flex justify-center bg-slate-100 dark:bg-slate-950/60 p-4 sm:p-8 rounded-2xl border border-[var(--color-border)] overflow-x-auto">
-          <style>{`
+        {/* Área da Folha A4 de Edição com Rolagem Interna Dedicada */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center p-16 space-y-3 bg-[var(--color-card)] min-h-[450px]">
+            <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary)]" />
+            <p className="text-xs text-[var(--color-muted-foreground)]">
+              Carregando modelo oficial da empresa...
+            </p>
+          </div>
+        ) : (
+          <div className="flex justify-center bg-slate-100 dark:bg-slate-950/60 p-4 sm:p-8 overflow-y-auto overflow-x-auto max-h-[calc(100vh-230px)] min-h-[640px]">
+            <style>{`
             .contract-editor-sheet {
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
               font-size: 9.5pt;
@@ -641,16 +659,17 @@ export default function DocumentTemplatesSettingsPage(): JSX.Element {
             }
           `}</style>
 
-          <div className="w-full max-w-[850px] min-h-[1100px] bg-white rounded-lg shadow-xl border border-slate-300 p-8 sm:p-12 contract-editor-sheet">
-            <div
-              ref={editorRef}
-              contentEditable
-              suppressContentEditableWarning
-              className="outline-none min-h-[950px] focus:ring-1 focus:ring-emerald-500/20 rounded p-1"
-            />
+            <div className="w-full max-w-[850px] min-h-[1100px] bg-white rounded-lg shadow-xl border border-slate-300 p-8 sm:p-12 contract-editor-sheet my-2">
+              <div
+                ref={editorRef}
+                contentEditable
+                suppressContentEditableWarning
+                className="outline-none min-h-[950px] focus:ring-1 focus:ring-emerald-500/20 rounded p-1"
+              />
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Card Explicativo de Escopo */}
       <Card className="border-[var(--color-border)] bg-[var(--color-card)]">

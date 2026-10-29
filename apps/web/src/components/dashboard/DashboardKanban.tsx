@@ -11,8 +11,8 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-  type DragOverEvent,
   type DragStartEvent,
+  type Modifier,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -23,6 +23,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { createDeal, patchDeal, type DealStage } from "@/lib/leads-api";
@@ -76,6 +77,26 @@ function parseItemLeadId(id: string | number): string | null {
   return null;
 }
 
+/**
+ * Modificador para impedir que o card saia dos limites visíveis da tela/viewport.
+ */
+const restrictToWindow: Modifier = ({ transform, draggingNodeRect, windowRect }) => {
+  if (!draggingNodeRect || !windowRect) {
+    return transform;
+  }
+  return {
+    ...transform,
+    x: Math.min(
+      Math.max(transform.x, -draggingNodeRect.left + 8),
+      windowRect.width - draggingNodeRect.right - 8
+    ),
+    y: Math.min(
+      Math.max(transform.y, -draggingNodeRect.top + 8),
+      windowRect.height - draggingNodeRect.bottom - 8
+    ),
+  };
+};
+
 export function DashboardKanban({
   initialItems,
   organizationId,
@@ -83,13 +104,20 @@ export function DashboardKanban({
 }: DashboardKanbanProps): JSX.Element {
   const [items, setItems] = useState<DashboardDealItem[]>(initialItems);
   const [activeItem, setActiveItem] = useState<DashboardDealItem | null>(null);
+  const [activeWidth, setActiveWidth] = useState<number | undefined>(undefined);
+  const [mounted, setMounted] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const showToast = (type: "success" | "error", text: string) => {
     setToast({ type, text });
     window.setTimeout(() => setToast(null), 3500);
   };
+
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Sincroniza estado com initialItems quando os dados do servidor mudam
   useEffect(() => {
@@ -107,7 +135,7 @@ export function DashboardKanban({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5,
+        distance: 6,
       },
     }),
     useSensor(TouchSensor, {
@@ -150,49 +178,21 @@ export function DashboardKanban({
     const item = items.find((i) => i.id === leadId);
     if (item) {
       setActiveItem(item);
-    }
-  }
-
-  function handleDragOver(event: DragOverEvent) {
-    const { active, over } = event;
-    if (!over) return;
-
-    const activeLeadId = parseItemLeadId(active.id);
-    if (!activeLeadId) return;
-
-    const sourceStage = findItemStage(activeLeadId);
-    if (!sourceStage) return;
-
-    // Destino pode ser a própria coluna ou outro item dentro da coluna
-    let targetStage: StageKey | null = parseContainerStage(over.id);
-    if (!targetStage) {
-      const overLeadId = parseItemLeadId(over.id);
-      if (overLeadId) {
-        targetStage = findItemStage(overLeadId);
+      // Captura largura exata do card original para renderizar com precisão no portal
+      if (typeof document !== "undefined") {
+        const domEl = document.querySelector(`[data-card-lead-id="${leadId}"]`);
+        if (domEl) {
+          const rect = domEl.getBoundingClientRect();
+          if (rect.width > 0) setActiveWidth(rect.width);
+        }
       }
     }
-
-    if (!targetStage || sourceStage === targetStage) return;
-
-    // Atualização otimista de posicionamento entre colunas durante o drag
-    setItems((prev) =>
-      prev.map((it) => {
-        if (it.id === activeLeadId) {
-          const def = DASHBOARD_STAGE_DEFS.find((d) => d.key === targetStage);
-          return {
-            ...it,
-            stageKey: targetStage,
-            dealStage: def ? def.dealStage : it.dealStage,
-          };
-        }
-        return it;
-      })
-    );
   }
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveItem(null);
+    setActiveWidth(undefined);
     if (!over || !organizationId) return;
 
     const activeLeadId = parseItemLeadId(active.id);
@@ -214,15 +214,26 @@ export function DashboardKanban({
     const targetDef = DASHBOARD_STAGE_DEFS.find((d) => d.key === targetStage);
     if (!targetDef) return;
 
-    const previousItem = initialItems.find((i) => i.id === activeLeadId);
-    const sourceDealStage = previousItem?.dealStage ?? currentItem.dealStage;
-
-    // Se não houve alteração real de estágio
-    if (sourceDealStage === targetDef.dealStage) {
+    // Se já estava no estágio alvo, não faz nada
+    if (currentItem.stageKey === targetStage) {
       return;
     }
 
-    // Persistência no backend
+    // 1. Atualização otimista imediata
+    setItems((prev) =>
+      prev.map((it) => {
+        if (it.id === activeLeadId) {
+          return {
+            ...it,
+            stageKey: targetStage,
+            dealStage: targetDef.dealStage,
+          };
+        }
+        return it;
+      })
+    );
+
+    // 2. Persistência assíncrona no backend
     try {
       if (currentItem.dealId) {
         await patchDeal(organizationId, currentItem.dealId, {
@@ -239,7 +250,7 @@ export function DashboardKanban({
 
       showToast("success", `Negociação de "${currentItem.name}" movida para ${targetDef.label}.`);
 
-      // Notifica o barramento de sincronização bidirecional
+      // 3. Notifica o barramento de sincronização bidirecional
       notifyPipelineUpdated({
         dealId: currentItem.dealId ?? undefined,
         leadId: currentItem.id,
@@ -247,11 +258,11 @@ export function DashboardKanban({
         source: "painel",
       });
 
-      // Invalida cache do painel para atualizar métricas e totais
+      // 4. Invalida cache do painel para atualizar métricas e totais
       void queryClient.invalidateQueries({ queryKey: ["dashboard-leads", organizationId] });
       void queryClient.invalidateQueries({ queryKey: ["dashboard-stats", organizationId] });
     } catch (err) {
-      // Em caso de falha, reverte para o estado inicial
+      // Em caso de falha, reverte para o estado original
       setItems(initialItems);
       showToast(
         "error",
@@ -262,7 +273,7 @@ export function DashboardKanban({
 
   function handleDragCancel() {
     setActiveItem(null);
-    setItems(initialItems);
+    setActiveWidth(undefined);
   }
 
   return (
@@ -270,7 +281,6 @@ export function DashboardKanban({
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
       onDragEnd={(e) => void handleDragEnd(e)}
       onDragCancel={handleDragCancel}
     >
@@ -291,13 +301,22 @@ export function DashboardKanban({
         })}
       </div>
 
-      <DragOverlay dropAnimation={null}>
-        {activeItem ? (
-          <div className="w-[260px] pointer-events-none rotate-2 shadow-2xl opacity-95">
-            <DashboardDealCardContent deal={activeItem} isDraggingOverlay />
-          </div>
-        ) : null}
-      </DragOverlay>
+      {/* Portal no document.body para evitar distorção de coordenadas por transforms ou overflow de ancestrais */}
+      {mounted && typeof document !== "undefined"
+        ? createPortal(
+            <DragOverlay dropAnimation={null} modifiers={[restrictToWindow]}>
+              {activeItem ? (
+                <div
+                  style={{ width: activeWidth ?? "100%" }}
+                  className="pointer-events-none shadow-2xl opacity-95"
+                >
+                  <DashboardDealCardContent deal={activeItem} isDraggingOverlay />
+                </div>
+              ) : null}
+            </DragOverlay>,
+            document.body
+          )
+        : null}
 
       {toast ? (
         <div
@@ -347,7 +366,7 @@ function DashboardKanbanColumn({
       ref={setNodeRef}
       className={`min-h-[280px] rounded-xl border p-3 transition-colors ${
         isOver
-          ? "border-emerald-500/60 bg-emerald-500/[0.04] dark:bg-emerald-500/[0.06]"
+          ? "border-emerald-500/80 bg-emerald-500/[0.08] dark:bg-emerald-500/[0.12] ring-2 ring-emerald-500/20"
           : "border-[var(--color-border)] bg-black/[0.02] dark:bg-black/30 backdrop-blur-xs"
       }`}
     >
@@ -382,39 +401,40 @@ function DashboardSortableCard({ deal }: { deal: DashboardDealItem }): JSX.Eleme
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.35 : 1,
+    opacity: isDragging ? 0.25 : 1,
     touchAction: "manipulation",
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <DashboardDealCardContent deal={deal} />
+    <div ref={setNodeRef} data-card-lead-id={deal.id} style={style} {...attributes} {...listeners}>
+      <DashboardDealCardContent deal={deal} isDragging={isDragging} />
     </div>
   );
 }
 
 function DashboardDealCardContent({
   deal,
+  isDragging,
   isDraggingOverlay,
 }: {
   deal: DashboardDealItem;
+  isDragging?: boolean;
   isDraggingOverlay?: boolean;
 }): JSX.Element {
   return (
     <div
-      className={`block cursor-grab active:cursor-grabbing rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all select-none ${
-        deal.stageKey === "fechado" ? "opacity-90" : ""
-      } ${
+      className={`block rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all select-none ${
         isDraggingOverlay
-          ? "border-emerald-500/80 ring-2 ring-emerald-500/30 shadow-xl"
-          : "hover:border-emerald-500/40 hover:-translate-y-0.5"
-      }`}
+          ? "cursor-grabbing border-emerald-500/80 ring-2 ring-emerald-500/30 shadow-2xl"
+          : isDragging
+            ? "cursor-grabbing border-dashed border-emerald-500/40"
+            : "cursor-grab active:cursor-grabbing hover:border-emerald-500/40 hover:-translate-y-0.5"
+      } ${deal.stageKey === "fechado" ? "opacity-90" : ""}`}
     >
       <div className="flex items-center justify-between gap-1">
         <Link
           href={`/leads/${deal.id}`}
           onClick={(e) => {
-            // Evita que clique no link interfira no drag
             if (isDraggingOverlay) e.preventDefault();
           }}
           className="text-[13px] font-semibold text-[var(--color-foreground)] hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors truncate"

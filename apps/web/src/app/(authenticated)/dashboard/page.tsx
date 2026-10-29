@@ -783,7 +783,7 @@ export default function DashboardPage(): JSX.Element {
       </section>
 
       {/* PIPELINE / FUNIL */}
-      <section className="rounded-2xl glass-card p-6">
+      <section className="rounded-2xl glass-card p-6" style={{ transform: "none" }}>
         <div className="mb-3 flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
           <div>
             <h3 className="text-[15px] font-semibold text-[var(--color-foreground)]">
