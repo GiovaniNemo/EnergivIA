@@ -26,6 +26,8 @@ import {
   verifyPublicOtp,
 } from "@/lib/sales-api";
 import { PdfViewerModal } from "@/components/sales/pdf-viewer-modal";
+import { BrandLogo } from "@/components/ui/brand-logo";
+import { cn } from "@energivia/utils";
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -83,6 +85,7 @@ export default function PublicSignDocumentPage(): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
+  const [penColor, setPenColor] = useState<string>("#0f172a");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [submittingSign, setSubmittingSign] = useState(false);
   const [signResult, setSignResult] = useState<any>(null);
@@ -150,6 +153,37 @@ export default function PublicSignDocumentPage(): JSX.Element {
     }
   }
 
+  function getCanvasCoordinates(
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
+    canvas: HTMLCanvasElement
+  ): { x: number; y: number } {
+    const rect = canvas.getBoundingClientRect();
+    let clientX = 0;
+    let clientY = 0;
+
+    if ("touches" in e) {
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else if (e.changedTouches && e.changedTouches.length > 0) {
+        clientX = e.changedTouches[0].clientX;
+        clientY = e.changedTouches[0].clientY;
+      }
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    // Precise scale factor between CSS box size and internal bitmap coordinates
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
+    };
+  }
+
   // Setup Canvas touch & mouse handlers
   function startDrawing(
     e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
@@ -160,16 +194,19 @@ export default function PublicSignDocumentPage(): JSX.Element {
     if (!ctx) return;
 
     setIsDrawing(true);
-    const rect = canvas.getBoundingClientRect();
-    const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+    const { x, y } = getCanvasCoordinates(e, canvas);
 
     ctx.beginPath();
     ctx.moveTo(x, y);
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 3.5;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.strokeStyle = "#1e293b";
+    ctx.strokeStyle = penColor;
+
+    // Immediately register point on tap/dot
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    setHasSignature(true);
   }
 
   function draw(e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) {
@@ -179,17 +216,20 @@ export default function PublicSignDocumentPage(): JSX.Element {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+    const { x, y } = getCanvasCoordinates(e, canvas);
 
     ctx.lineTo(x, y);
     ctx.stroke();
-    setHasSignature(true);
   }
 
   function stopDrawing() {
+    if (!isDrawing) return;
     setIsDrawing(false);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.closePath();
   }
 
   function clearCanvas() {
@@ -274,23 +314,25 @@ export default function PublicSignDocumentPage(): JSX.Element {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-emerald-500 selection:text-white dark:bg-slate-950 dark:text-slate-100">
       {/* Top Banner Institucional */}
-      <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90 sticky top-0 z-10">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm">
-              <ShieldCheck className="h-5 w-5" />
-            </span>
-            <div>
-              <span className="text-xs font-semibold tracking-wider uppercase text-emerald-600 dark:text-emerald-400">
-                Assinatura Eletrônica Segura
+      <header className="border-b border-slate-200 bg-white/95 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 sticky top-0 z-20">
+        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-2.5">
+          <div className="flex items-center gap-2.5">
+            <div className="h-7 max-w-[130px] sm:max-w-[160px] flex items-center shrink-0">
+              <BrandLogo size="sm" priority />
+            </div>
+            <div className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
+            <div className="flex items-center gap-1">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                <ShieldCheck className="h-3 w-3" /> Sign
               </span>
-              <h1 className="text-sm font-bold text-slate-900 dark:text-white">EnergivIA Sign</h1>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
             <Lock className="h-3.5 w-3.5 text-emerald-600" />
-            <span className="hidden sm:inline">MP 2.200-2/2001 · Lei 14.063</span>
+            <span className="hidden sm:inline font-mono text-[10px]">
+              MP 2.200-2/2001 · Lei 14.063
+            </span>
           </div>
         </div>
       </header>
@@ -543,33 +585,80 @@ export default function PublicSignDocumentPage(): JSX.Element {
                 </div>
               </div>
 
-              <button
-                onClick={clearCanvas}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-              >
-                <RotateCcw className="h-3 w-3" /> Limpar
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={clearCanvas}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <RotateCcw className="h-3 w-3" /> Limpar
+                </button>
+              </div>
             </div>
 
             {/* Signature Pad */}
-            <div className="relative rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-2 dark:border-slate-700 dark:bg-slate-800/40">
-              <canvas
-                ref={canvasRef}
-                width={500}
-                height={200}
-                className="w-full h-44 cursor-crosshair touch-none rounded-xl bg-white dark:bg-slate-900"
-                onMouseDown={startDrawing}
-                onMouseMove={draw}
-                onMouseUp={stopDrawing}
-                onMouseLeave={stopDrawing}
-                onTouchStart={startDrawing}
-                onTouchMove={draw}
-                onTouchEnd={stopDrawing}
-              />
-              <div className="pointer-events-none absolute bottom-5 left-8 right-8 border-b border-slate-300 dark:border-slate-700 text-center pb-1">
-                <span className="text-[10px] uppercase tracking-wider text-slate-400">
-                  Linha de Assinatura · {signerDisplayName}
-                </span>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                    Cor da Caneta:
+                  </span>
+                  <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <button
+                      type="button"
+                      onClick={() => setPenColor("#0f172a")}
+                      className={cn(
+                        "flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition-all",
+                        penColor === "#0f172a"
+                          ? "bg-white text-slate-900 shadow-xs dark:bg-slate-700 dark:text-white"
+                          : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                      )}
+                    >
+                      <span className="h-2 w-2 rounded-full bg-slate-900 dark:bg-slate-100 inline-block" />
+                      Preto
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPenColor("#1e40af")}
+                      className={cn(
+                        "flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition-all",
+                        penColor === "#1e40af"
+                          ? "bg-white text-blue-700 shadow-xs dark:bg-slate-700 dark:text-blue-300"
+                          : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                      )}
+                    >
+                      <span className="h-2 w-2 rounded-full bg-blue-700 inline-block" />
+                      Azul
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white p-2.5 shadow-md">
+                <canvas
+                  ref={canvasRef}
+                  width={600}
+                  height={240}
+                  className="w-full h-48 cursor-crosshair touch-none rounded-xl bg-white"
+                  onMouseDown={startDrawing}
+                  onMouseMove={draw}
+                  onMouseUp={stopDrawing}
+                  onMouseLeave={stopDrawing}
+                  onTouchStart={startDrawing}
+                  onTouchMove={draw}
+                  onTouchEnd={stopDrawing}
+                />
+                {!hasSignature && (
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-xs text-slate-400 select-none">
+                    <FileSignature className="h-6 w-6 text-slate-300 mb-1" />
+                    <span>Escreva sua assinatura aqui</span>
+                  </div>
+                )}
+                <div className="pointer-events-none absolute bottom-5 left-6 right-6 border-b border-slate-300 text-center pb-1">
+                  <span className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">
+                    Linha de Assinatura · {signerDisplayName}
+                  </span>
+                </div>
               </div>
             </div>
 

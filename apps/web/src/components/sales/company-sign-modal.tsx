@@ -79,6 +79,36 @@ export function CompanySignModal({
 
   if (!isOpen) return null;
 
+  function getCanvasCoordinates(
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
+    canvas: HTMLCanvasElement
+  ): { x: number; y: number } {
+    const rect = canvas.getBoundingClientRect();
+    let clientX = 0;
+    let clientY = 0;
+
+    if ("touches" in e) {
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else if (e.changedTouches && e.changedTouches.length > 0) {
+        clientX = e.changedTouches[0].clientX;
+        clientY = e.changedTouches[0].clientY;
+      }
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
+    };
+  }
+
   function startDrawing(
     e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
   ) {
@@ -88,16 +118,18 @@ export function CompanySignModal({
     if (!ctx) return;
 
     setIsDrawing(true);
-    const rect = canvas.getBoundingClientRect();
-    const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+    const { x, y } = getCanvasCoordinates(e, canvas);
 
     ctx.beginPath();
     ctx.moveTo(x, y);
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 3;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.strokeStyle = "#0f172a";
+
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    setHasDrawn(true);
   }
 
   function draw(e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) {
@@ -107,17 +139,20 @@ export function CompanySignModal({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+    const { x, y } = getCanvasCoordinates(e, canvas);
 
     ctx.lineTo(x, y);
     ctx.stroke();
-    setHasDrawn(true);
   }
 
   function stopDrawing() {
+    if (!isDrawing) return;
     setIsDrawing(false);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.closePath();
   }
 
   function clearCanvas() {
@@ -319,12 +354,12 @@ export function CompanySignModal({
                         Limpar
                       </button>
                     </div>
-                    <div className="relative overflow-hidden rounded-xl border border-slate-300 bg-slate-50 shadow-inner dark:border-slate-700 dark:bg-slate-950">
+                    <div className="relative overflow-hidden rounded-xl border border-slate-300 bg-white shadow-inner dark:border-slate-600 dark:bg-white">
                       <canvas
                         ref={canvasRef}
-                        width={460}
-                        height={120}
-                        className="w-full cursor-crosshair touch-none"
+                        width={500}
+                        height={160}
+                        className="w-full h-32 cursor-crosshair touch-none bg-white rounded-xl"
                         onMouseDown={startDrawing}
                         onMouseMove={draw}
                         onMouseUp={stopDrawing}
@@ -335,7 +370,7 @@ export function CompanySignModal({
                       />
                       {!hasDrawn && (
                         <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-slate-400">
-                          Desenhe aqui com o mouse ou o dedo
+                          Desenhe sua rubrica aqui com o mouse ou o dedo
                         </div>
                       )}
                     </div>
