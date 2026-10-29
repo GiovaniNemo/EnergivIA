@@ -860,3 +860,5 @@
 | task-869 | Frontend: Página de Gestão de Documentos Padrão em /configuracoes/documentos | completed | Interface moderna com abas Contrato e Procuração, editor A4, tags dinâmicas copiáveis e ações de salvar/restaurar |
 | task-870 | Frontend: Links de navegação em Configurações, Menu Lateral e aviso de escopo em vendas/[id] | completed | Card em /configuracoes, item no menu, busca global e link direto na ficha da venda para editar o modelo padrão |
 | task-871 | Validação completa (testes automatizados, build, lint), commit e push das alterações | completed | 37 testes Vitest sales aprovados, ESLint limpo, build NestJS e build Next.js (87 rotas) aprovados |
+| task-872 | Corrigir layout responsivo do cabeçalho de vendas/[id] impedindo que nomes longos empurrem os botões de ação e que o badge PJ flutue | completed | Aplicado min-w-0, flex-1, truncate com title no título, shrink-0 na barra de ações e nos botões, mantendo o badge adjacente ao nome |
+| task-873 | Validar compilação e build do Next.js, commit e push para origin/main | completed | ESLint 0 erros, build do Next.js (87 rotas) aprovado e commit enviado para origin/main |
