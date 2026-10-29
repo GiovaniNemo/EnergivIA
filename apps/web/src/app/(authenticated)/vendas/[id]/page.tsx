@@ -610,11 +610,13 @@ export default function VendaDetailPage(): JSX.Element {
     setTimeout(() => setCopiedLink(null), 3000);
   }
 
-  function handleCopyWhatsAppMessage(doc: any) {
+  function handleSendWhatsAppMessage(doc: any) {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const token = doc?.publicToken || doc?.signToken || "";
     const signUrl = `${origin}/assinar/${token}`;
-    const clientFirstName = (formData.customerName || "Cliente").split(" ")[0];
+    const clientFirstName = (formData.customerName || sale?.customerName || "Cliente")
+      .trim()
+      .split(" ")[0];
     const docType = String(doc?.templateType || doc?.documentType || "");
     const docName = docType.startsWith("CONTRATO")
       ? "Contrato de Venda do Sistema Solar"
@@ -625,7 +627,29 @@ export default function VendaDetailPage(): JSX.Element {
       `${signUrl}\n\n` +
       `A assinatura conta com certificação eletrônica e código de segurança. Qualquer dúvida, estou à disposição!`;
 
-    navigator.clipboard.writeText(text);
+    try {
+      navigator.clipboard?.writeText(text);
+    } catch {
+      // Ignora erro se clipboard não permitido
+    }
+
+    const rawPhone =
+      formData.customerPhone ||
+      sale?.customerPhone ||
+      sale?.proposal?.deal?.lead?.whatsapp ||
+      sale?.proposal?.deal?.lead?.phone ||
+      "";
+    const cleanDigits = rawPhone.replace(/\D/g, "");
+    let waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    if (cleanDigits.length >= 10) {
+      const waTarget = cleanDigits.startsWith("55") ? cleanDigits : `55${cleanDigits}`;
+      waUrl = `https://wa.me/${waTarget}?text=${encodeURIComponent(text)}`;
+    }
+
+    if (typeof window !== "undefined") {
+      window.open(waUrl, "_blank", "noopener,noreferrer");
+    }
+
     setCopiedMsg(doc.id);
     setTimeout(() => setCopiedMsg(null), 3000);
   }
@@ -2224,14 +2248,14 @@ export default function VendaDetailPage(): JSX.Element {
                               {/* 4. WhatsApp */}
                               <button
                                 type="button"
-                                onClick={() => handleCopyWhatsAppMessage(doc)}
+                                onClick={() => handleSendWhatsAppMessage(doc)}
                                 className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600/30 bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700 shadow-sm hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-300 transition-colors"
-                                title="Copiar mensagem pronta para envio no WhatsApp"
+                                title="Abrir WhatsApp para enviar o link do contrato ao cliente"
                               >
                                 {copiedMsg === doc.id ? (
                                   <>
                                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                                    <span>Copiado!</span>
+                                    <span>Abrindo...</span>
                                   </>
                                 ) : (
                                   <>
