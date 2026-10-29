@@ -2135,52 +2135,24 @@ export default function VendaDetailPage(): JSX.Element {
                     return (
                       <div
                         key={doc.id}
-                        className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                        className="flex flex-col gap-3 py-3.5 sm:flex-row sm:items-center sm:justify-between"
                       >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-xs text-[var(--color-foreground)]">
+                        <div className="space-y-1 min-w-0 flex-1 pr-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-xs text-[var(--color-foreground)] truncate max-w-[280px] sm:max-w-none">
                               {title}
                             </span>
-                            <span
-                              className={cn(
-                                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border",
-                                isSigned
-                                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                                  : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                              )}
-                            >
-                              {isSigned ? (
-                                <>
-                                  <CheckCircle2 className="h-2.5 w-2.5" /> Assinado pelo Cliente
-                                </>
-                              ) : (
-                                <>
-                                  <Clock className="h-2.5 w-2.5" /> Aguardando Cliente
-                                </>
-                              )}
-                            </span>
-
-                            {isContract && (
-                              <span
-                                className={cn(
-                                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border",
-                                  doc.companySignedAt || doc.isCompanySigned
-                                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                                    : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                                )}
-                              >
-                                {doc.companySignedAt || doc.isCompanySigned ? (
-                                  <>
-                                    <CheckCircle2 className="h-2.5 w-2.5" /> Assinado pelo
-                                    Integrador
-                                  </>
-                                ) : (
-                                  <>
-                                    <Clock className="h-2.5 w-2.5" /> Pendente Assinatura do
-                                    Integrador
-                                  </>
-                                )}
+                            {isSigned ? (
+                              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                                <CheckCircle2 className="h-2.5 w-2.5" /> Assinado
+                              </span>
+                            ) : isContract && !doc.companySignedAt && !doc.isCompanySigned ? (
+                              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                                <Clock className="h-2.5 w-2.5" /> Aguarda Integrador
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300">
+                                <Clock className="h-2.5 w-2.5" /> Aguarda Cliente
                               </span>
                             )}
                           </div>
@@ -2205,7 +2177,7 @@ export default function VendaDetailPage(): JSX.Element {
                         </div>
 
                         {/* Action buttons */}
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                           {isSigned ? (
                             <>
                               <button
@@ -2249,7 +2221,7 @@ export default function VendaDetailPage(): JSX.Element {
                                 <button
                                   type="button"
                                   onClick={() => setCompanySigningDoc(doc)}
-                                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors animate-pulse"
+                                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors"
                                   title="Assinar formalmente como integrador antes de enviar ao cliente"
                                 >
                                   <FileSignature className="h-3.5 w-3.5" />
@@ -2257,23 +2229,7 @@ export default function VendaDetailPage(): JSX.Element {
                                 </button>
                               )}
 
-                              {/* 1. Botão: Editar Minuta */}
-                              <button
-                                type="button"
-                                onClick={() => setSelectedDocForEditing(doc.id)}
-                                className={cn(
-                                  "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors",
-                                  isContract && !doc.companySignedAt && !doc.isCompanySigned
-                                    ? "border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
-                                    : "bg-emerald-600 text-white hover:bg-emerald-700"
-                                )}
-                                title="Abrir minuta para edição em tempo real e adição de cláusulas"
-                              >
-                                <FileEdit className="h-3.5 w-3.5" />
-                                Editar Minuta
-                              </button>
-
-                              {/* 2. Visualizar PDF da minuta */}
+                              {/* Visualizar PDF da minuta */}
                               <button
                                 type="button"
                                 onClick={() =>
@@ -2290,7 +2246,7 @@ export default function VendaDetailPage(): JSX.Element {
                                 PDF
                               </button>
 
-                              {/* 3. Copiar Link de Assinatura */}
+                              {/* Copiar Link de Assinatura */}
                               <button
                                 type="button"
                                 onClick={() => handleCopySignLink(token, doc)}
@@ -2310,7 +2266,7 @@ export default function VendaDetailPage(): JSX.Element {
                                 )}
                               </button>
 
-                              {/* 4. WhatsApp */}
+                              {/* WhatsApp */}
                               <button
                                 type="button"
                                 onClick={() => handleSendWhatsAppMessage(doc)}
@@ -2330,13 +2286,13 @@ export default function VendaDetailPage(): JSX.Element {
                                 )}
                               </button>
 
-                              {/* 5. Excluir Minuta de Teste */}
+                              {/* Excluir Minuta de Teste */}
                               <button
                                 type="button"
                                 onClick={() => setDocToDelete(doc)}
                                 disabled={deletingDocId === doc.id}
                                 className="inline-flex items-center justify-center rounded-lg border border-transparent p-1.5 text-red-500 hover:border-red-200 hover:bg-red-50 hover:text-red-700 dark:hover:border-red-900/60 dark:hover:bg-red-950/40 dark:hover:text-red-400 transition-colors"
-                                title="Excluir esta minuta de teste não assinada"
+                                title="Excluir este documento não assinado"
                               >
                                 {deletingDocId === doc.id ? (
                                   <RefreshCw className="h-3.5 w-3.5 animate-spin" />
