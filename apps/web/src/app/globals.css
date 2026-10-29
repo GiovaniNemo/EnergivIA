@@ -120,6 +120,7 @@
     --color-error: #ef4444;
     --color-error-dark: #b91c1c;
     --color-error-foreground: #ffffff;
+    color-scheme: light;
     --color-background: #f8fafc;
     --color-foreground: #0f172a;
     --color-muted: #f1f5f9;
@@ -181,6 +182,7 @@
     --color-primary-950: #134e4a;
     --color-primary: var(--color-primary-500);
     --color-primary-foreground: #ffffff;
+    color-scheme: dark;
     --color-background: #090d14;
     --color-foreground: #f8fafc;
     --color-muted: rgba(255, 255, 255, 0.05);

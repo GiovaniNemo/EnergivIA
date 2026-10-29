@@ -551,7 +551,7 @@ export function LiveContractEditorModal({
             <p className="text-sm font-medium">Carregando minuta para edição em tempo real...</p>
           </div>
         ) : (
-          <div className="w-full max-w-[850px] space-y-4">
+          <div className="w-full max-w-[850px] space-y-4 mx-auto">
             {docData?.isSigned ? (
               <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300 flex items-center gap-2 shadow-sm">
                 <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />

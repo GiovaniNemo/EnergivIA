@@ -130,6 +130,31 @@ export function ProposalInternalHeader({
 }: ProposalInternalHeaderProps): JSX.Element {
   const [isActionsOpen, setIsActionsOpen] = useState(false);
   const actionsRef = useRef<HTMLDivElement>(null);
+  const [isTemplateMenuOpen, setIsTemplateMenuOpen] = useState(false);
+  const templateMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isTemplateMenuOpen) return;
+    function handleClickOutside(event: MouseEvent): void {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (templateMenuRef.current?.contains(target)) return;
+      setIsTemplateMenuOpen(false);
+    }
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (event.key === "Escape") {
+        setIsTemplateMenuOpen(false);
+      }
+    }
+    window.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isTemplateMenuOpen]);
+
+  const activeTemplate = templates.find((t) => t.id === selectedTemplateId);
 
   useEffect(() => {
     if (!isActionsOpen) return;
@@ -362,10 +387,10 @@ export function ProposalInternalHeader({
           {pdfError ? <p className="text-xs text-red-600 dark:text-red-400">{pdfError}</p> : null}
 
           {/* Seleção do Layout no Topo (coluna direita, abaixo dos botões) */}
-          <div className="group relative rounded-xl border border-[var(--color-border)]/80 bg-[var(--color-card)]/90 backdrop-blur-sm p-2 sm:px-3 sm:py-2.5 shadow-xs transition-all hover:border-emerald-500/40 hover:shadow-sm">
+          <div className="group relative rounded-xl border border-slate-200 dark:border-white/10 bg-white/90 dark:bg-[#0c121e]/90 backdrop-blur-sm p-2 sm:px-3 sm:py-2.5 shadow-xs transition-all hover:border-emerald-500/40 dark:hover:border-emerald-500/40">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2.5">
               <div className="flex items-center justify-between sm:justify-start gap-1.5 shrink-0 pl-0.5">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-foreground)]">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
                   <LayoutTemplate className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <span className="tracking-tight">Modelo da proposta:</span>
                 </div>
@@ -376,24 +401,68 @@ export function ProposalInternalHeader({
                 )}
               </div>
 
-              <div className="relative min-w-0 flex-1">
-                <select
+              {/* Menu Suspenso Customizado com Suporte Integral a Tema Claro e Escuro */}
+              <div className="relative min-w-0 flex-1" ref={templateMenuRef}>
+                <button
+                  type="button"
                   id="top-proposal-layout-select"
-                  value={selectedTemplateId}
-                  onChange={(e) => onTemplateChange(e.target.value)}
                   disabled={templateSaving}
-                  className="w-full h-9 appearance-none rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-background)]/80 pl-3 pr-8 text-xs font-medium text-[var(--color-foreground)] outline-none transition-all hover:border-emerald-500/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                  aria-expanded={isTemplateMenuOpen}
+                  onClick={() => setIsTemplateMenuOpen((prev) => !prev)}
+                  className="w-full h-9 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50/80 dark:bg-white/[0.04] pl-3 pr-8 text-xs font-medium text-slate-900 dark:text-slate-100 outline-none transition-all hover:border-emerald-500/50 dark:hover:border-emerald-500/50 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-between gap-2 text-left cursor-pointer"
                 >
-                  <option value="">Selecione um template publicado</option>
-                  {templates.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} (v{t.version})
-                    </option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted-foreground)]">
-                  <ChevronDown className="h-3.5 w-3.5" />
-                </div>
+                  <span className="truncate">
+                    {activeTemplate
+                      ? `${activeTemplate.name} (v${activeTemplate.version})`
+                      : "Selecione um template publicado"}
+                  </span>
+                  <div
+                    className={cn(
+                      "pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-400 transition-transform duration-200",
+                      isTemplateMenuOpen && "rotate-180"
+                    )}
+                  >
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </div>
+                </button>
+
+                {isTemplateMenuOpen && (
+                  <div className="absolute left-0 right-0 top-11 z-50 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c121e] p-1.5 shadow-xl shadow-black/30 backdrop-blur-md max-h-60 overflow-y-auto animate-in fade-in zoom-in-95">
+                    {templates.length === 0 ? (
+                      <p className="p-3 text-center text-xs text-[var(--color-muted-foreground)]">
+                        Nenhum template publicado encontrado.
+                      </p>
+                    ) : (
+                      templates.map((t) => {
+                        const isSelected = selectedTemplateId === t.id;
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => {
+                              onTemplateChange(t.id);
+                              setIsTemplateMenuOpen(false);
+                            }}
+                            className={cn(
+                              "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs transition text-left",
+                              isSelected
+                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold"
+                                : "text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06]"
+                            )}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <span className="block truncate font-medium">{t.name}</span>
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                                Versão {t.version}
+                              </span>
+                            </div>
+                            {isSelected && <Check className="h-4 w-4 text-emerald-500 shrink-0" />}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0">

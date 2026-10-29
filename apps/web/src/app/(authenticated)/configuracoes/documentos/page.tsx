@@ -681,27 +681,29 @@ export default function DocumentTemplatesSettingsPage(): JSX.Element {
             }
           `}</style>
 
-            <div className="w-full max-w-[850px] mb-2 px-4 py-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 text-xs text-emerald-800 dark:text-emerald-300 flex items-center justify-between gap-3 shadow-sm">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span>
-                  <strong>Paginação A4 Contínua:</strong> O documento ajusta e distribui as
-                  cláusulas e tabelas de equipamentos automaticamente nas folhas A4, eliminando
-                  lacunas em branco desnecessárias.
+            <div className="w-full max-w-[850px] flex flex-col items-center mx-auto">
+              <div className="w-full mb-3 px-4 py-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 text-xs text-emerald-800 dark:text-emerald-300 flex items-center justify-between gap-3 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>
+                    <strong>Paginação A4 Contínua:</strong> O documento ajusta e distribui as
+                    cláusulas e tabelas de equipamentos automaticamente nas folhas A4, eliminando
+                    lacunas em branco desnecessárias.
+                  </span>
+                </div>
+                <span className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 hidden sm:inline shrink-0">
+                  Quebras manuais são opcionais
                 </span>
               </div>
-              <span className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 hidden sm:inline shrink-0">
-                Quebras manuais são opcionais
-              </span>
-            </div>
 
-            <div className="w-full max-w-[850px] min-h-[1123px] h-fit shrink-0 bg-white rounded-lg shadow-xl border border-slate-300 p-8 sm:p-14 contract-editor-sheet my-4">
-              <div
-                ref={editorRef}
-                contentEditable
-                suppressContentEditableWarning
-                className="outline-none min-h-[950px] h-fit focus:ring-1 focus:ring-emerald-500/20 rounded p-1"
-              />
+              <div className="w-full min-h-[1123px] h-fit shrink-0 bg-white rounded-lg shadow-2xl border border-slate-300 p-8 sm:p-14 contract-editor-sheet mb-8">
+                <div
+                  ref={editorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  className="outline-none min-h-[950px] h-fit focus:ring-1 focus:ring-emerald-500/20 rounded p-1"
+                />
+              </div>
             </div>
           </div>
         )}
