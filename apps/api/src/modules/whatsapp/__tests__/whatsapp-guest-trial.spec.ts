@@ -537,6 +537,7 @@ describe("WhatsApp Bot - Formatação de Mensagens e Degustação Trial", () => 
           step: "AWAITING_CITY",
           kwp: 70,
           roofType: "Metálico",
+          billValue: 850,
           isGuestTrial: true,
         },
         messages: [
@@ -761,6 +762,143 @@ describe("WhatsApp Bot - Formatação de Mensagens e Degustação Trial", () => 
       expect(reply).toContain("A rede trifásica é 220V ou 380V?");
       expect(reply).toContain("Trifásico 220V");
       expect(reply).toContain("Trifásico 380V");
+    });
+  });
+
+  describe("isTenantPlanActive & Degustação Garantida de 3 Cotações no WhatsApp", () => {
+    it("deve permitir cotações no WhatsApp para tenant em teste mesmo com 7 dias úteis expirados se proposalsCount < 3", async () => {
+      const mockPrisma = {
+        proposal: {
+          count: vi.fn().mockResolvedValue(1),
+        },
+      };
+
+      const bot = new WhatsappBotService(
+        { get: vi.fn() } as any,
+        mockPrisma as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any
+      );
+
+      // Tenant criado há 50 dias (trial da web expirado)
+      const expiredTenant = {
+        id: "tenant-expired-trial",
+        createdAt: new Date("2026-09-01T12:00:00Z"),
+        settings: {},
+        subscription: null,
+      };
+
+      const status = await (bot as any).isTenantPlanActive(expiredTenant);
+
+      expect(status.active).toBe(true);
+      expect(mockPrisma.proposal.count).toHaveBeenCalledWith({
+        where: { tenantId: "tenant-expired-trial", deletedAt: null },
+      });
+    });
+
+    it("deve bloquear tenant em teste quando 7 dias úteis expiraram E já atingiu 3 ou mais cotações", async () => {
+      const mockPrisma = {
+        proposal: {
+          count: vi.fn().mockResolvedValue(3),
+        },
+      };
+
+      const bot = new WhatsappBotService(
+        { get: vi.fn() } as any,
+        mockPrisma as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any
+      );
+
+      const expiredTenant = {
+        id: "tenant-expired-trial",
+        createdAt: new Date("2026-09-01T12:00:00Z"),
+        settings: {},
+        subscription: null,
+      };
+
+      const status = await (bot as any).isTenantPlanActive(expiredTenant);
+
+      expect(status.active).toBe(false);
+      expect(status.reason).toBe("trial_expired");
+    });
+
+    it("deve permitir até 20 cotações para tenant em teste não expirado", async () => {
+      const mockPrisma = {
+        proposal: {
+          count: vi.fn().mockResolvedValue(19),
+        },
+      };
+
+      const bot = new WhatsappBotService(
+        { get: vi.fn() } as any,
+        mockPrisma as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any
+      );
+
+      // Tenant criado hoje
+      const freshTenant = {
+        id: "tenant-fresh-trial",
+        createdAt: new Date(),
+        settings: {},
+        subscription: null,
+      };
+
+      const status = await (bot as any).isTenantPlanActive(freshTenant);
+
+      expect(status.active).toBe(true);
+    });
+
+    it("deve bloquear tenant em teste não expirado se atingir 20 cotações", async () => {
+      const mockPrisma = {
+        proposal: {
+          count: vi.fn().mockResolvedValue(20),
+        },
+      };
+
+      const bot = new WhatsappBotService(
+        { get: vi.fn() } as any,
+        mockPrisma as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any
+      );
+
+      const freshTenant = {
+        id: "tenant-fresh-trial",
+        createdAt: new Date(),
+        settings: {},
+        subscription: null,
+      };
+
+      const status = await (bot as any).isTenantPlanActive(freshTenant);
+
+      expect(status.active).toBe(false);
+      expect(status.reason).toBe("proposal_limit_reached");
     });
   });
 });

@@ -2630,7 +2630,8 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 
   private async isTenantPlanActive(tenant: {
     id: string;
-    createdAt: Date;
+    createdAt: Date | string;
+    settings?: unknown;
     subscription?: {
       status: string;
       plan?: { id?: string; name?: string | null; features?: unknown } | null;
@@ -2644,13 +2645,15 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     const planDetails = getTenantPlanDetails(tenant);
 
     if (planDetails.isTrial) {
-      if (planDetails.trialExpired) {
-        return { active: false, reason: "trial_expired", planName: planDetails.planName };
-      }
-
       const proposalsCount = await this.prisma.proposal.count({
         where: { tenantId: tenant.id, deletedAt: null },
       });
+
+      // No WhatsApp, todo integrador/empresa em teste tem direito garantido a pelo menos
+      // 3 cotações gratuitas completas de degustação, mesmo que o prazo de 7 dias úteis da web tenha expirado.
+      if (planDetails.trialExpired && proposalsCount >= 3) {
+        return { active: false, reason: "trial_expired", planName: planDetails.planName };
+      }
 
       if (proposalsCount >= 20) {
         return {
@@ -2951,40 +2954,42 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       isGuestTrial = true;
     }
 
-    // 5. Verificação de Assinatura / Plano Ativo
-    const planStatus = await this.isTenantPlanActive(tenant);
-    if (!planStatus.active) {
-      this.logger.warn(
-        `Plano inativo/expirado para organização ${tenant.id} no WhatsApp ${fromWaId} (${planStatus.reason})`
-      );
-      let blockMsg =
-        `Olá! ☀️ O assistente de WhatsApp com IA para dimensionamento solar da *EnergivIA* não está incluso no seu plano (${planStatus.planName || "Standard"}).\n\n` +
-        `O atendimento e dimensionamento automático por WhatsApp com IA é exclusivo dos planos *Pro* e *Plus*.\n\n` +
-        `Para desbloquear o assistente de IA 24/7 e cotações no WhatsApp, escolha o seu plano em:\n` +
-        `👉 *https://www.energivia.com.br/gestao/meus-planos*`;
-
-      if (planStatus.reason === "proposal_limit_reached") {
-        blockMsg =
-          planStatus.monthlyLimit && planStatus.monthlyLimit > 20
-            ? `Olá! ⚡ Sua empresa atingiu o limite mensal de ${planStatus.monthlyLimit} propostas do seu plano (${planStatus.planName || "atual"}).\n\n` +
-              `Para continuar gerando propostas comerciais ilimitadas com IA pelo WhatsApp, faça upgrade para o *Plano Pro* em:\n` +
-              `👉 *https://www.energivia.com.br/gestao/meus-planos*`
-            : `Olá! ⚡ Sua empresa atingiu o limite de 20 cotações gratuitas do período de teste da *EnergivIA*.\n\n` +
-              `Para continuar gerando propostas comerciais ilimitadas e dimensionamentos com IA para seus clientes pelo WhatsApp, escolha o seu plano em:\n` +
-              `👉 *https://www.energivia.com.br/gestao/meus-planos*`;
-      } else if (planStatus.reason === "trial_expired") {
-        blockMsg =
-          `Olá! ☀️ O período de teste gratuito de 7 dias úteis da sua organização na *EnergivIA* foi concluído.\n\n` +
-          `Para continuar utilizando o assistente de IA, dimensionamentos e propostas comerciais automáticas pelo WhatsApp, escolha o seu plano em:\n` +
+    // 5. Verificação de Assinatura / Plano Ativo (apenas para organizações cadastradas, nunca bloqueia degustação de convidados)
+    if (!isGuestTrial) {
+      const planStatus = await this.isTenantPlanActive(tenant);
+      if (!planStatus.active) {
+        this.logger.warn(
+          `Plano inativo/expirado para organização ${tenant.id} no WhatsApp ${fromWaId} (${planStatus.reason})`
+        );
+        let blockMsg =
+          `Olá! ☀️ O assistente de WhatsApp com IA para dimensionamento solar da *EnergivIA* não está incluso no seu plano (${planStatus.planName || "Standard"}).\n\n` +
+          `O atendimento e dimensionamento automático por WhatsApp com IA é exclusivo dos planos *Pro* e *Plus*.\n\n` +
+          `Para desbloquear o assistente de IA 24/7 e cotações no WhatsApp, escolha o seu plano em:\n` +
           `👉 *https://www.energivia.com.br/gestao/meus-planos*`;
-      }
 
-      await this.whatsappCloud.sendTextMessage({
-        phoneNumberId,
-        toWaId: fromWaId,
-        body: blockMsg,
-      });
-      return;
+        if (planStatus.reason === "proposal_limit_reached") {
+          blockMsg =
+            planStatus.monthlyLimit && planStatus.monthlyLimit > 20
+              ? `Olá! ⚡ Sua empresa atingiu o limite mensal de ${planStatus.monthlyLimit} propostas do seu plano (${planStatus.planName || "atual"}).\n\n` +
+                `Para continuar gerando propostas comerciais ilimitadas com IA pelo WhatsApp, faça upgrade para o *Plano Pro* em:\n` +
+                `👉 *https://www.energivia.com.br/gestao/meus-planos*`
+              : `Olá! ⚡ Sua empresa atingiu o limite de 20 cotações gratuitas do período de teste da *EnergivIA*.\n\n` +
+                `Para continuar gerando propostas comerciais ilimitadas e dimensionamentos com IA para seus clientes pelo WhatsApp, escolha o seu plano em:\n` +
+                `👉 *https://www.energivia.com.br/gestao/meus-planos*`;
+        } else if (planStatus.reason === "trial_expired") {
+          blockMsg =
+            `Olá! ☀️ O período de teste gratuito de 7 dias úteis da sua organização na *EnergivIA* foi concluído.\n\n` +
+            `Para continuar utilizando o assistente de IA, dimensionamentos e propostas comerciais automáticas pelo WhatsApp, escolha o seu plano em:\n` +
+            `👉 *https://www.energivia.com.br/gestao/meus-planos*`;
+        }
+
+        await this.whatsappCloud.sendTextMessage({
+          phoneNumberId,
+          toWaId: fromWaId,
+          body: blockMsg,
+        });
+        return;
+      }
     }
 
     // 4. Busca ou criação da Conversa vinculada à Organização do Integrador
