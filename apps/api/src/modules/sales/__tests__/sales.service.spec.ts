@@ -495,4 +495,47 @@ describe("SalesService", () => {
       });
     });
   });
+
+  describe("tenantSignature", () => {
+    it("should return tenant representative signature info", async () => {
+      mockPrisma.tenant.findUnique.mockResolvedValue({
+        representativeName: "João Silva",
+        representativeCpf: "123.456.789-00",
+        representativeSignature: "data:image/png;base64,assinaturaSalva",
+      });
+
+      const res = await service.getTenantSignature("tenant-1");
+      expect(res.representativeName).toBe("João Silva");
+      expect(res.representativeSignature).toBe("data:image/png;base64,assinaturaSalva");
+    });
+
+    it("should update tenant representative signature", async () => {
+      mockPrisma.tenant.update.mockResolvedValue({
+        representativeName: "Maria Santos",
+        representativeCpf: "987.654.321-00",
+        representativeSignature: "data:image/png;base64,novaAssinatura",
+      });
+
+      const res = await service.updateTenantSignature("tenant-1", {
+        representativeName: "Maria Santos",
+        representativeCpf: "987.654.321-00",
+        representativeSignature: "data:image/png;base64,novaAssinatura",
+      });
+
+      expect(res.representativeName).toBe("Maria Santos");
+      expect(mockPrisma.tenant.update).toHaveBeenCalledWith({
+        where: { id: "tenant-1" },
+        data: {
+          representativeName: "Maria Santos",
+          representativeCpf: "987.654.321-00",
+          representativeSignature: "data:image/png;base64,novaAssinatura",
+        },
+        select: {
+          representativeName: true,
+          representativeCpf: true,
+          representativeSignature: true,
+        },
+      });
+    });
+  });
 });

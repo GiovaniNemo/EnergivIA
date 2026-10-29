@@ -306,5 +306,110 @@ describe("SignatureAuditService", () => {
       const auditMatches = fullHtml.match(/Certificado de Assinatura Eletrônica/g);
       expect(auditMatches?.length).toBe(1);
     });
+
+    it("should build bilateral audit sheet and replace company signature block when company signed", async () => {
+      const mockDoc = {
+        id: "doc-bilateral",
+        saleId: "sale-bilateral",
+        title: "Contrato Bilateral",
+        templateType: "CONTRATO_PF",
+        status: "PENDING",
+        companySignedAt: new Date("2026-10-29T14:00:00Z"),
+        companySignerName: "Eng. Roberto Silva",
+        companySignerEmail: "roberto@solarenergy.com.br",
+        companySignerCpf: "11122233344",
+        companySignerIp: "200.1.2.3",
+        companySignerUserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        companySignatureImage: "data:image/png;base64,rubricaEmpresa",
+        companySignatureHash: "comp-hash-12345",
+        contentHtml: `<html><body><h1>Contrato</h1>{{bloco_assinatura_empresa}}{{bloco_assinatura_cliente}}{{folha_auditoria_anexa}}</body></html>`,
+        sale: {
+          id: "sale-bilateral",
+          customerType: "PF",
+          tenant: { name: "Solar Energy Ltda" },
+          proposal: { deal: { lead: { name: "Cliente Final", email: "cliente@teste.com" } } },
+        },
+      };
+
+      const fullHtml = await service.buildFullDocumentHtml(mockDoc as any, {
+        isSigned: true,
+        signerName: "Cliente Final",
+        signerCpf: "999.888.777-66",
+        signerEmail: "cliente@teste.com",
+        signerIp: "177.1.1.1",
+        signerUserAgent: "Safari",
+        friendlyUserAgent: "Safari",
+        signedAt: new Date("2026-10-29T15:30:00Z"),
+        signatureHash: "cli-hash-99999",
+        signatureImage: "data:image/png;base64,rubricaCliente",
+      });
+
+      // Contrato deve ter a rubrica da empresa e do cliente
+      expect(fullHtml).toContain("data:image/png;base64,rubricaEmpresa");
+      expect(fullHtml).toContain("data:image/png;base64,rubricaCliente");
+      // Trilha bilateral
+      expect(fullHtml).toContain("Trilha de Auditoria Bilateral");
+      expect(fullHtml).toContain("Signatário 1 — CONTRATADA");
+      expect(fullHtml).toContain("Eng. Roberto Silva");
+      expect(fullHtml).toContain("roberto@solarenergy.com.br");
+      expect(fullHtml).toContain("Signatário 2 — CONTRATANTE");
+      expect(fullHtml).toContain("Cliente Final");
+    });
+  });
+
+  describe("signCompanyDocument", () => {
+    it("should allow company to sign document, update tenant default signature and return new PDF url", async () => {
+      mockPrisma.tenant = { update: vi.fn().mockResolvedValue({}) };
+      mockPrisma.saleDocument.findFirst = vi.fn().mockResolvedValue({
+        id: "doc-10",
+        saleId: "sale-10",
+        tenantId: "tenant-10",
+        templateType: "CONTRATO_PF",
+        title: "Contrato Solar #10",
+        status: "PENDING",
+        companySignedAt: null,
+        contentHtml: "<html><body>{{bloco_assinatura_empresa}}</body></html>",
+        sale: {
+          id: "sale-10",
+          tenant: {
+            id: "tenant-10",
+            name: "Solar Prime",
+            representativeSignature: null,
+          },
+          proposal: { deal: { lead: { name: "Cliente" } } },
+        },
+      });
+      mockPrisma.saleDocument.update.mockResolvedValue({
+        id: "doc-10",
+        originalPdfUrl: "/uploads/sales-documents/company-signed-doc-10.pdf",
+      });
+
+      const res = await service.signCompanyDocument(
+        "tenant-10",
+        "sale-10",
+        "doc-10",
+        { id: "user-1", name: "Carlos Diretor", email: "carlos@solarprime.com.br" },
+        { ip: "189.2.3.4", headers: { "user-agent": "Chrome/130" } },
+        {
+          signatureImage: "data:image/png;base64,novaRubrica",
+          signerName: "Carlos Diretor",
+          signerCpf: "12345678900",
+          saveAsDefault: true,
+        }
+      );
+
+      expect(res.success).toBe(true);
+      expect(res.companySignerName).toBe("Carlos Diretor");
+      expect(mockPrisma.tenant.update).toHaveBeenCalledWith({
+        where: { id: "tenant-10" },
+        data: {
+          representativeSignature: "data:image/png;base64,novaRubrica",
+          representativeName: "Carlos Diretor",
+          representativeCpf: "12345678900",
+        },
+      });
+      expect(mockPrisma.saleDocument.update).toHaveBeenCalled();
+      expect(mockDocTemplateService.generatePdfWithHash).toHaveBeenCalled();
+    });
   });
 });

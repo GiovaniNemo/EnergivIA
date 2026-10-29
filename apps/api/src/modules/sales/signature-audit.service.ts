@@ -150,6 +150,10 @@ export class SignatureAuditService {
       organizationName: companyName,
       companyLogoUrl: doc.sale?.tenant?.logoUrl,
       otpVerified: Boolean(doc.otpVerifiedAt),
+      companySignedAt: doc.companySignedAt,
+      companySignerName: doc.companySignerName,
+      companySignatureImage: doc.companySignatureImage,
+      isCompanySigned: Boolean(doc.companySignedAt),
     };
   }
 
@@ -432,6 +436,142 @@ export class SignatureAuditService {
     };
   }
 
+  async signCompanyDocument(
+    tenantId: string,
+    saleId: string,
+    docId: string,
+    signerUser: { id: string; name?: string; email?: string },
+    req: { ip?: string; headers?: Record<string, string | string[] | undefined> },
+    dto: {
+      signatureImage?: string;
+      signerName?: string;
+      signerCpf?: string;
+      saveAsDefault?: boolean;
+    }
+  ) {
+    const doc = await this.prisma.saleDocument.findFirst({
+      where: { id: docId, saleId, tenantId },
+      include: {
+        sale: {
+          include: {
+            proposal: {
+              include: {
+                simulation: true,
+                deal: {
+                  include: {
+                    lead: true,
+                  },
+                },
+              },
+            },
+            tenant: true,
+          },
+        },
+      },
+    });
+
+    if (!doc) {
+      throw new NotFoundException("Documento não encontrado para esta venda.");
+    }
+
+    if (doc.companySignedAt) {
+      throw new BadRequestException("Este documento já foi assinado pela empresa.");
+    }
+
+    const tenant = doc.sale?.tenant;
+    let signatureImage = dto.signatureImage;
+    if (!signatureImage && tenant?.representativeSignature) {
+      signatureImage = tenant.representativeSignature;
+    }
+
+    if (!signatureImage) {
+      throw new BadRequestException(
+        "Nenhuma assinatura fornecida e a empresa não possui rubrica padrão cadastrada."
+      );
+    }
+
+    const companySignerName =
+      dto.signerName?.trim() ||
+      tenant?.representativeName ||
+      signerUser.name ||
+      "Representante Legal";
+    const companySignerEmail = signerUser.email || "—";
+    const companySignerCpf = dto.signerCpf?.trim() || tenant?.representativeCpf || null;
+
+    const forwarded = req?.headers?.["x-forwarded-for"];
+    const companySignerIp =
+      (typeof forwarded === "string"
+        ? forwarded.split(",")[0]?.trim()
+        : Array.isArray(forwarded)
+          ? forwarded[0]
+          : null) ||
+      req?.ip ||
+      "127.0.0.1";
+
+    const companySignerUserAgent =
+      (typeof req?.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null) ||
+      "Navegador Web Corporativo";
+
+    const companySignedAt = new Date();
+    const companySignatureHash = crypto.randomUUID();
+
+    if (dto.saveAsDefault || !tenant?.representativeSignature) {
+      await this.prisma.tenant.update({
+        where: { id: tenantId },
+        data: {
+          representativeSignature: signatureImage,
+          representativeName: companySignerName,
+          ...(companySignerCpf ? { representativeCpf: companySignerCpf } : {}),
+        },
+      });
+    }
+
+    const updatedDoc = {
+      ...doc,
+      companySignedAt,
+      companySignerName,
+      companySignerEmail,
+      companySignerCpf,
+      companySignerIp,
+      companySignerUserAgent,
+      companySignatureImage: signatureImage,
+      companySignatureHash,
+    };
+
+    const newHtml = await this.buildFullDocumentHtml(updatedDoc, undefined);
+
+    const { pdfBuffer, sha256Hash } =
+      await this.documentTemplateService.generatePdfWithHash(newHtml);
+
+    const fileName = `company-signed-${doc.id}-${Date.now()}.pdf`;
+    this.documentTemplateService.savePdfToDisk(fileName, pdfBuffer);
+
+    const saved = await this.prisma.saleDocument.update({
+      where: { id: doc.id },
+      data: {
+        companySignedAt,
+        companySignerName,
+        companySignerEmail,
+        companySignerCpf,
+        companySignerIp,
+        companySignerUserAgent,
+        companySignatureImage: signatureImage,
+        companySignatureHash,
+        contentHtml: newHtml,
+        originalPdfUrl: `/uploads/sales-documents/${fileName}`,
+        originalPdfHash: sha256Hash,
+      },
+    });
+
+    return {
+      success: true,
+      companySignedAt,
+      companySignerName,
+      companySignatureHash,
+      pdfUrl: saved.originalPdfUrl,
+    };
+  }
+
   async buildFullDocumentHtml(
     doc: {
       title: string;
@@ -440,6 +580,14 @@ export class SignatureAuditService {
       templateType: string;
       createdAt?: Date | null;
       contentHtml?: string | null;
+      companySignedAt?: Date | null;
+      companySignerName?: string | null;
+      companySignerEmail?: string | null;
+      companySignerCpf?: string | null;
+      companySignerIp?: string | null;
+      companySignerUserAgent?: string | null;
+      companySignatureImage?: string | null;
+      companySignatureHash?: string | null;
       sale?: {
         investmentAmount?: number | null;
         rgNumber?: string | null;
@@ -494,7 +642,35 @@ export class SignatureAuditService {
 
     const isSigned = Boolean(signMeta?.isSigned);
     let clientSignatureBlock = "";
+    let companySignatureBlock = "";
+    let companySignedAtFormatted = "";
     let auditSheetHtml = "";
+
+    const hasCompanySigner = Boolean(doc.companySignedAt && doc.companySignatureImage);
+    if (hasCompanySigner && doc.companySignedAt && doc.companySignatureImage) {
+      const companySignedDate = new Date(doc.companySignedAt);
+      companySignedAtFormatted = `${companySignedDate.toLocaleDateString("pt-BR")} às ${companySignedDate.toLocaleTimeString(
+        "pt-BR",
+        {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          timeZone: "America/Sao_Paulo",
+        }
+      )} (Horário de Brasília)`;
+
+      companySignatureBlock = `
+        <div style="border: 1px solid #059669; background: #ffffff; border-radius: 6px; padding: 6px; text-align: center;">
+          <img src="${doc.companySignatureImage}" style="max-height: 44px; max-width: 170px; object-fit: contain; display: block; margin: 0 auto;" />
+          <div style="font-size: 7.5pt; font-weight: 700; color: #047857; margin-top: 2px;">
+            ✓ Assinado em ${companySignedAtFormatted}
+          </div>
+          <div style="font-size: 6.5pt; font-family: monospace; color: #64748b;">
+            Autenticação Corporativa · ${(doc.companySignatureHash || "").slice(0, 8)}...
+          </div>
+        </div>
+      `;
+    }
 
     if (isSigned && signMeta?.signatureImage) {
       const signedAtFormatted = `${signMeta.signedAt.toLocaleDateString("pt-BR")} às ${signMeta.signedAt.toLocaleTimeString(
@@ -519,7 +695,75 @@ export class SignatureAuditService {
         </div>
       `;
 
-      auditSheetHtml = `
+      if (hasCompanySigner) {
+        auditSheetHtml = `
+        <div style="page-break-before: always; margin-top: 0; padding-top: 10px;">
+          <div style="border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 18px;">
+            <div style="font-size: 13pt; font-weight: bold; text-align: center; text-transform: uppercase; color: #0f172a;">
+              Certificado de Assinatura Eletrônica & Trilha de Auditoria Bilateral
+            </div>
+            <div style="font-size: 8.5pt; text-align: center; color: #64748b; margin-top: 2px;">
+              Documento de Conformidade com o Marco Legal da Assinatura Digital (Lei 14.063/2020, MP 2.200-2/2001 e Art. 784, III do CPC)
+            </div>
+          </div>
+
+          <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px; margin-bottom: 12px; font-size: 9pt;">
+            <div style="font-weight: bold; color: #059669; margin-bottom: 8px; text-transform: uppercase; font-size: 8.5pt;">1. Identificação do Documento</div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 600; color: #475569; width: 35%;">Título do Documento:</span><span style="width: 65%; font-family: monospace; font-size: 9pt;">${doc.title}</span></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 600; color: #475569; width: 35%;">Empresa Integradora:</span><span style="width: 65%; font-family: monospace; font-size: 9pt;">${tenant?.name || "EnergivIA Soluções Solares"}</span></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 600; color: #475569; width: 35%;">Código de Rastreio (UUID):</span><span style="width: 65%; font-family: monospace; font-size: 9pt;">${doc.publicToken}</span></div>
+            <div style="display: flex; justify-content: space-between;"><span style="font-weight: 600; color: #475569; width: 35%;">Hash Original (SHA-256):</span><span style="width: 65%; font-family: monospace; font-size: 9pt;">${doc.originalPdfHash || "—"}</span></div>
+          </div>
+
+          <!-- SIGNATÁRIO 1: CONTRATADA -->
+          <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px; margin-bottom: 12px; font-size: 9pt;">
+            <div style="font-weight: bold; color: #059669; margin-bottom: 8px; text-transform: uppercase; font-size: 8.5pt;">2. Signatário 1 — CONTRATADA (Empresa Integradora)</div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 600; color: #475569; width: 35%;">Razão Social / Nome:</span><span style="width: 65%; font-size: 9pt;">${tenant?.name || "Empresa Integradora"}</span></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 600; color: #475569; width: 35%;">Representante Autorizado:</span><span style="width: 65%; font-family: monospace; font-size: 9pt;">${doc.companySignerName || "Representante Legal"}</span></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 600; color: #475569; width: 35%;">CPF do Representante:</span><span style="width: 65%; font-family: monospace; font-size: 9pt;">${doc.companySignerCpf ? maskCpf(doc.companySignerCpf) : "—"}</span></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 600; color: #475569; width: 35%;">E-mail Corporativo:</span><span style="width: 65%; font-family: monospace; font-size: 9pt;">${doc.companySignerEmail || "—"}</span></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 600; color: #475569; width: 35%;">Endereço IP Registrado:</span><span style="width: 65%; font-family: monospace; font-size: 9pt;">${doc.companySignerIp || "—"}</span></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 600; color: #475569; width: 35%;">Ambiente / Navegador:</span><span style="width: 65%; font-size: 9pt;"><strong>${parseUserAgentFriendly(doc.companySignerUserAgent)}</strong></span></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 600; color: #475569; width: 35%;">Data e Hora da Assinatura:</span><span style="width: 65%; font-family: monospace; font-size: 9pt;">${companySignedAtFormatted}</span></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 600; color: #475569; width: 35%;">Autenticação:</span><span style="width: 65%; font-size: 9pt;">Sessão Corporativa Autenticada na Plataforma EnergivIA</span></div>
+            <div style="border: 1px dashed #059669; background: #ffffff; padding: 8px; text-align: center; border-radius: 4px; margin-top: 8px;">
+              <span style="display: block; font-size: 7.5pt; color: #047857; margin-bottom: 3px; font-weight: 600;">Rubrica da Contratada:</span>
+              <img src="${doc.companySignatureImage}" style="max-height: 50px; max-width: 220px; object-fit: contain;" />
+            </div>
+          </div>
+
+          <!-- SIGNATÁRIO 2: CONTRATANTE -->
+          <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px; margin-bottom: 12px; font-size: 9pt;">
+            <div style="font-weight: bold; color: #059669; margin-bottom: 8px; text-transform: uppercase; font-size: 8.5pt;">3. Signatário 2 — CONTRATANTE (Cliente Titular)</div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 600; color: #475569; width: 35%;">Nome Completo:</span><span style="width: 65%; font-family: monospace; font-size: 9pt;">${signMeta.signerName}</span></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 600; color: #475569; width: 35%;">CPF / Documento:</span><span style="width: 65%; font-family: monospace; font-size: 9pt;">${signMeta.signerCpf}</span></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 600; color: #475569; width: 35%;">E-mail Cadastrado:</span><span style="width: 65%; font-family: monospace; font-size: 9pt;">${signMeta.signerEmail}</span></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 600; color: #475569; width: 35%;">Endereço IP Registrado:</span><span style="width: 65%; font-family: monospace; font-size: 9pt;">${signMeta.signerIp}</span></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 600; color: #475569; width: 35%;">Ambiente / Navegador:</span><span style="width: 65%; font-size: 9pt;"><strong>${signMeta.friendlyUserAgent}</strong><span style="display: block; font-size: 7pt; color: #64748b; font-family: monospace; word-break: break-all; margin-top: 1px;">Identificador Forense: ${signMeta.signerUserAgent}</span></span></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 600; color: #475569; width: 35%;">Data e Hora da Assinatura:</span><span style="width: 65%; font-family: monospace; font-size: 9pt;">${signedAtFormatted}</span></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 600; color: #475569; width: 35%;">Validação OTP:</span><span style="width: 65%; font-size: 9pt;">Confirmado com sucesso via código de 5 dígitos enviado por e-mail</span></div>
+
+            <div style="border: 1px dashed #94a3b8; background: #ffffff; padding: 8px; text-align: center; border-radius: 4px; margin-top: 8px;">
+              <span style="display: block; font-size: 7.5pt; color: #64748b; margin-bottom: 3px;">Rubrica do Cliente:</span>
+              <img src="${signMeta.signatureImage}" style="max-height: 50px; max-width: 220px; object-fit: contain;" />
+            </div>
+          </div>
+
+          <!-- INTEGRIDADE CRIPTOGRÁFICA -->
+          <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px; margin-bottom: 12px; font-size: 9pt;">
+            <div style="font-weight: bold; color: #059669; margin-bottom: 8px; text-transform: uppercase; font-size: 8.5pt;">4. Integridade Criptográfica e Não-Repúdio</div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 600; color: #475569; width: 35%;">ID da Transação (Contratada):</span><span style="width: 65%; font-family: monospace; font-size: 9pt;">${doc.companySignatureHash || "—"}</span></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 600; color: #475569; width: 35%;">ID da Transação (Contratante):</span><span style="width: 65%; font-family: monospace; font-size: 9pt;">${signMeta.signatureHash}</span></div>
+            <div style="display: flex; justify-content: space-between;"><span style="font-weight: 600; color: #475569; width: 35%;">Padrão Tecnológico:</span><span style="width: 65%; font-size: 9pt;">Carimbo do Tempo UTC com Duplo Hash SHA-256</span></div>
+          </div>
+
+          <div style="font-size: 7.5pt; color: #475569; text-align: justify; border-top: 1px solid #e2e8f0; padding-top: 10px; margin-top: 15px;">
+            <strong>ENQUADRAMENTO LEGAL:</strong> O presente documento eletrônico possui plena eficácia probatória e validade jurídica entre as partes signatárias, atendendo integralmente ao disposto no Art. 10, § 2º da Medida Provisória nº 2.200-2/2001 e na Lei Federal nº 14.063/2020 (Assinatura Eletrônica Avançada Bilateral) e constituindo Título Executivo Extrajudicial nos termos do Art. 784, III do Código de Processo Civil. A integridade do conteúdo e a autoria das partes foram comprovadas mediante autenticação em duas etapas e registro forense inviolável de IP, data/hora e metadados.
+          </div>
+        </div>
+      `;
+      } else {
+        auditSheetHtml = `
         <div style="page-break-before: always; margin-top: 0; padding-top: 10px;">
           <div style="border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 18px;">
             <div style="font-size: 13pt; font-weight: bold; text-align: center; text-transform: uppercase; color: #0f172a;">
@@ -565,6 +809,7 @@ export class SignatureAuditService {
           </div>
         </div>
       `;
+      }
     }
 
     // Se o documento foi editado e possui contentHtml personalizado, utilizá-lo diretamente como base
@@ -596,6 +841,39 @@ export class SignatureAuditService {
         );
 
       customHtml = `<!DOCTYPE html>\n<html lang="pt-BR">\n${headHtml}\n<body>\n${cleanBody}\n</body>\n</html>`;
+
+      // Atualizar bloco da empresa
+      if (companySignatureBlock) {
+        if (customHtml.includes("{{bloco_assinatura_empresa}}")) {
+          customHtml = customHtml.replace(
+            /\{\{bloco_assinatura_empresa\}\}/g,
+            companySignatureBlock
+          );
+        } else {
+          const waitingCompanyRegex =
+            /<div style="[^"]*border:\s*1px dashed #d97706[^"]*">[\s\S]*?Aguardando Assinatura do Integrador[\s\S]*?<\/div>\s*<\/div>/i;
+          if (waitingCompanyRegex.test(customHtml)) {
+            customHtml = customHtml.replace(waitingCompanyRegex, companySignatureBlock);
+          } else {
+            const legacyCompanyBoxRegex =
+              /<div style="border:\s*1px dashed #059669;\s*background:\s*#ecfdf5;[\s\S]*?✓ ASSINADO DIGITALMENTE[\s\S]*?<\/div>\s*<\/div>/i;
+            if (legacyCompanyBoxRegex.test(customHtml)) {
+              customHtml = customHtml.replace(legacyCompanyBoxRegex, companySignatureBlock);
+            }
+          }
+        }
+      } else if (customHtml.includes("{{bloco_assinatura_empresa}}")) {
+        const waitingCompanyBlock = `<div style="border: 1px dashed #d97706; background: #fffbeb; border-radius: 6px; padding: 8px; text-align: center;">
+          <div style="font-size: 7.5pt; font-weight: 700; color: #b45309; text-transform: uppercase;">
+            Aguardando Assinatura do Integrador
+          </div>
+          <div style="font-size: 7pt; color: #92400e; margin-top: 2px;">
+            Assinatura formal da Contratada pendente no painel
+          </div>
+        </div>`;
+        customHtml = customHtml.replace(/\{\{bloco_assinatura_empresa\}\}/g, waitingCompanyBlock);
+      }
+
       if (clientSignatureBlock) {
         if (customHtml.includes("{{bloco_assinatura_cliente}}")) {
           customHtml = customHtml.replace(
@@ -651,8 +929,9 @@ export class SignatureAuditService {
       tenant,
       lead,
       formattedDate,
-      clientSignatureBlock,
-      auditSheetHtml,
+      companySignatureBlock: companySignatureBlock || undefined,
+      clientSignatureBlock: clientSignatureBlock || undefined,
+      auditSheetHtml: auditSheetHtml || undefined,
     });
 
     if (signerNameResolved && signerNameResolved !== "Cliente") {

@@ -63,9 +63,18 @@ export class DocumentTemplateService {
     lead?: any;
     formattedDate?: string;
     clientSignatureBlock?: string;
+    companySignatureBlock?: string;
     auditSheetHtml?: string;
   }): Promise<Record<string, string | number | undefined | null>> {
-    const { sale, tenant, lead, formattedDate, clientSignatureBlock, auditSheetHtml } = params;
+    const {
+      sale,
+      tenant,
+      lead,
+      formattedDate,
+      clientSignatureBlock,
+      companySignatureBlock,
+      auditSheetHtml,
+    } = params;
 
     const tenantSettings = (tenant?.settings as Record<string, unknown>) || {};
     const tenantName = tenant?.name || "EnergivIA Soluções Solares";
@@ -285,6 +294,7 @@ export class DocumentTemplateService {
           month: "long",
           year: "numeric",
         }),
+      bloco_assinatura_empresa: companySignatureBlock,
       bloco_assinatura_cliente: clientSignatureBlock,
       folha_auditoria_anexa: auditSheetHtml,
     };
@@ -307,6 +317,17 @@ export class DocumentTemplateService {
         key.startsWith("tabela_")
       ) {
         return val ? String(val) : "";
+      }
+      if (key === "bloco_assinatura_empresa") {
+        if (val && val !== "—") return String(val);
+        return `<div style="border: 1px dashed #d97706; background: #fffbeb; border-radius: 6px; padding: 8px; text-align: center;">
+          <div style="font-size: 7.5pt; font-weight: 700; color: #b45309; text-transform: uppercase;">
+            Aguardando Assinatura do Integrador
+          </div>
+          <div style="font-size: 7pt; color: #92400e; margin-top: 2px;">
+            Assinatura formal da Contratada pendente no painel
+          </div>
+        </div>`;
       }
       if (key === "bloco_assinatura_cliente") {
         if (val && val !== "—") return String(val);
@@ -515,8 +536,14 @@ export class DocumentTemplateService {
         category: "Comercial",
       },
       {
+        key: "bloco_assinatura_empresa",
+        label: "Assinatura da Empresa",
+        description: "Área de assinatura do integrador com rubrica e carimbo corporativo",
+        category: "Assinatura",
+      },
+      {
         key: "bloco_assinatura_cliente",
-        label: "Bloco de Assinatura",
+        label: "Assinatura do Cliente",
         description: "Área de assinatura digital com carimbo e validação OTP",
         category: "Assinatura",
       },

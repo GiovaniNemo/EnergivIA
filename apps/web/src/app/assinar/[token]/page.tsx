@@ -360,6 +360,15 @@ export default function PublicSignDocumentPage(): JSX.Element {
                   {organizationDisplayName}
                 </span>
               </div>
+              {isContract && (doc?.isCompanySigned || doc?.companySignedAt) && (
+                <div className="flex justify-between border-b border-slate-200/60 pb-2 dark:border-slate-700/60 text-emerald-700 dark:text-emerald-400 font-medium">
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Chancela do Integrador:
+                  </span>
+                  <span>Assinado por {doc.companySignerName || "Representante Autorizado"}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-slate-500 dark:text-slate-400">
                   Integridade (SHA-256 Original):
@@ -626,14 +635,26 @@ export default function PublicSignDocumentPage(): JSX.Element {
 
             {/* Audit Details */}
             <div className="rounded-xl bg-slate-50 p-4 text-xs dark:bg-slate-800/50 text-left space-y-2">
+              {(doc?.companySignedAt || doc?.isCompanySigned) && (
+                <div className="flex justify-between border-b border-slate-200/60 pb-2 dark:border-slate-700/60 text-emerald-800 dark:text-emerald-300">
+                  <span className="text-slate-500 dark:text-slate-400">
+                    Integrador (CONTRATADA):
+                  </span>
+                  <span className="font-semibold">
+                    {doc.companySignerName || "Representante Legal"}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between">
-                <span className="text-slate-500 dark:text-slate-400">Signatário:</span>
+                <span className="text-slate-500 dark:text-slate-400">
+                  {doc?.companySignedAt ? "Cliente (CONTRATANTE):" : "Signatário:"}
+                </span>
                 <span className="font-semibold text-slate-800 dark:text-slate-200">
                   {signerDisplayName}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500 dark:text-slate-400">Data e Hora:</span>
+                <span className="text-slate-500 dark:text-slate-400">Data e Hora do Aceite:</span>
                 <span className="font-semibold text-slate-800 dark:text-slate-200">
                   {formatDate(signResult?.signedAt || doc?.signedAt)}
                 </span>

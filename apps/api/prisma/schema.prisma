@@ -17,6 +17,9 @@ model Tenant {
   logoUrl          String?
   settings         Json?
   subscriptionPlan String?
+  representativeName        String?   @map("representative_name")
+  representativeCpf         String?   @map("representative_cpf")
+  representativeSignature   String?   @map("representative_signature") @db.Text
   createdById      String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -1596,6 +1599,15 @@ model SaleDocument {
   signerUserAgent   String?
   signatureImage    String?            @db.Text
   signatureHash     String?
+
+  companySignedAt        DateTime?          @map("company_signed_at")
+  companySignerName      String?            @map("company_signer_name")
+  companySignerEmail     String?            @map("company_signer_email")
+  companySignerCpf       String?            @map("company_signer_cpf")
+  companySignerIp        String?            @map("company_signer_ip")
+  companySignerUserAgent String?            @map("company_signer_user_agent")
+  companySignatureImage  String?            @map("company_signature_image") @db.Text
+  companySignatureHash   String?            @map("company_signature_hash")
 
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt

@@ -395,17 +395,7 @@ export const CONTRACT_PF_TEMPLATE = `<!DOCTYPE html>
           <div style="font-size: 8pt; color: #475569; margin-bottom: 8px;">
             Representante: <strong>{{nome_vendedor}}</strong>
           </div>
-          <div style="border: 1px dashed #059669; background: #ecfdf5; border-radius: 6px; padding: 8px; text-align: center;">
-            <div style="font-size: 8pt; font-weight: 700; color: #047857; text-transform: uppercase;">
-              ✓ ASSINADO DIGITALMENTE
-            </div>
-            <div style="font-size: 7.5pt; color: #065f46; margin-top: 2px;">
-              Autenticado institucionalmente via Plataforma EnergivIA
-            </div>
-            <div style="font-size: 7pt; font-family: monospace; color: #047857; margin-top: 3px;">
-              Emissão e Conformidade: {{data_atual}}
-            </div>
-          </div>
+          {{bloco_assinatura_empresa}}
         </div>
 
         <!-- CONTRATANTE -->

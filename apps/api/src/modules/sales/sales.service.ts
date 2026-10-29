@@ -34,6 +34,10 @@ function formatSaleDocument<T extends Record<string, unknown>>(d: T) {
     documentType: d["templateType"] ?? d["documentType"],
     signStatus: d["status"] ?? d["signStatus"],
     signToken: d["publicToken"] ?? d["signToken"],
+    companySignedAt: d["companySignedAt"] ?? null,
+    companySignerName: d["companySignerName"] ?? null,
+    companySignatureImage: d["companySignatureImage"] ?? null,
+    isCompanySigned: Boolean(d["companySignedAt"]),
   };
 }
 
@@ -959,6 +963,54 @@ export class SalesService {
       success: true,
       message: "Minuta excluída com sucesso.",
     };
+  }
+
+  async getTenantSignature(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: {
+        representativeName: true,
+        representativeCpf: true,
+        representativeSignature: true,
+      },
+    });
+    return (
+      tenant || {
+        representativeName: null,
+        representativeCpf: null,
+        representativeSignature: null,
+      }
+    );
+  }
+
+  async updateTenantSignature(
+    tenantId: string,
+    data: {
+      representativeName?: string;
+      representativeCpf?: string;
+      representativeSignature?: string;
+    }
+  ) {
+    const updated = await this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        ...(data.representativeName !== undefined && {
+          representativeName: data.representativeName?.trim() || null,
+        }),
+        ...(data.representativeCpf !== undefined && {
+          representativeCpf: data.representativeCpf?.trim() || null,
+        }),
+        ...(data.representativeSignature !== undefined && {
+          representativeSignature: data.representativeSignature || null,
+        }),
+      },
+      select: {
+        representativeName: true,
+        representativeCpf: true,
+        representativeSignature: true,
+      },
+    });
+    return updated;
   }
 
   async getGlobalDocumentTemplates(tenantId: string) {

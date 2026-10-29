@@ -8,20 +8,27 @@ import {
   Post,
   Put,
   Query,
+  Req,
   UseGuards,
 } from "@nestjs/common";
+import type { Request } from "express";
 import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
 import { TenantId } from "../../common/decorators/tenant-id.decorator";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import type { JwtPayload } from "@energivia/types";
 import { SalesService } from "./sales.service";
+import { SignatureAuditService } from "./signature-audit.service";
 import { UpdateSaleDto } from "./dto/update-sale.dto";
 import { QuerySalesDto } from "./dto/query-sales.dto";
+import { SignCompanyDocumentDto, UpdateTenantSignatureDto } from "./dto/sign-company-document.dto";
 
 @Controller(["sales", "api/sales"])
 @UseGuards(UnifiedAuthGuard)
 export class SalesController {
-  constructor(private readonly salesService: SalesService) {}
+  constructor(
+    private readonly salesService: SalesService,
+    private readonly signatureAuditService: SignatureAuditService
+  ) {}
 
   @Post("convert/:proposalId")
   convertToSale(
@@ -66,6 +73,16 @@ export class SalesController {
     return this.salesService.resetGlobalDocumentTemplate(tenantId, body.documentType);
   }
 
+  @Get("company-signature")
+  getCompanySignature(@TenantId() tenantId: string) {
+    return this.salesService.getTenantSignature(tenantId);
+  }
+
+  @Patch("company-signature")
+  updateCompanySignature(@TenantId() tenantId: string, @Body() dto: UpdateTenantSignatureDto) {
+    return this.salesService.updateTenantSignature(tenantId, dto);
+  }
+
   @Get(":id")
   getSaleById(@TenantId() tenantId: string, @Param("id") id: string) {
     return this.salesService.getSaleById(tenantId, id);
@@ -83,6 +100,26 @@ export class SalesController {
     @Body() body: { documentType: import("@prisma/client").DocumentType }
   ) {
     return this.salesService.generateSaleDocument(tenantId, id, body.documentType);
+  }
+
+  @Post(":id/documents/:docId/sign-company")
+  signCompanyDocument(
+    @TenantId() tenantId: string,
+    @Param("id") saleId: string,
+    @Param("docId") docId: string,
+    @CurrentUser() user: JwtPayload | undefined,
+    @Req() req: Request,
+    @Body() dto: SignCompanyDocumentDto
+  ) {
+    const userObj = user as (JwtPayload & { name?: string }) | undefined;
+    return this.signatureAuditService.signCompanyDocument(
+      tenantId,
+      saleId,
+      docId,
+      { id: user?.sub || "", name: userObj?.name, email: user?.email },
+      req,
+      dto
+    );
   }
 
   @Get(":id/documents/:docId/editor")

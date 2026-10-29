@@ -31,6 +31,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { LoadingState } from "@/components/ui/loading-state";
 import { LiveContractEditorModal } from "@/components/sales/live-contract-editor-modal";
 import { PdfViewerModal } from "@/components/sales/pdf-viewer-modal";
+import { CompanySignModal } from "@/components/sales/company-sign-modal";
 import { deleteSaleDocument, generateSaleDocument, getSaleById, updateSale } from "@/lib/sales-api";
 import {
   fetchCnpjData,
@@ -180,6 +181,7 @@ export default function VendaDetailPage(): JSX.Element {
   const [saving, setSaving] = useState(false);
   const [generatingDoc, setGeneratingDoc] = useState<string | null>(null);
   const [selectedDocForEditing, setSelectedDocForEditing] = useState<string | null>(null);
+  const [companySigningDoc, setCompanySigningDoc] = useState<any>(null);
   const [viewingPdfDoc, setViewingPdfDoc] = useState<{
     url: string;
     title: string;
@@ -602,7 +604,12 @@ export default function VendaDetailPage(): JSX.Element {
     }
   }
 
-  function handleCopySignLink(token: string) {
+  function handleCopySignLink(token: string, doc?: any) {
+    const isContract = String(doc?.templateType || doc?.documentType || "").startsWith("CONTRATO");
+    if (isContract && !doc?.companySignedAt && !doc?.isCompanySigned) {
+      setCompanySigningDoc(doc);
+      return;
+    }
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const url = `${origin}/assinar/${token}`;
     navigator.clipboard.writeText(url);
@@ -611,6 +618,11 @@ export default function VendaDetailPage(): JSX.Element {
   }
 
   function handleSendWhatsAppMessage(doc: any) {
+    const isContract = String(doc?.templateType || doc?.documentType || "").startsWith("CONTRATO");
+    if (isContract && !doc?.companySignedAt && !doc?.isCompanySigned) {
+      setCompanySigningDoc(doc);
+      return;
+    }
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const token = doc?.publicToken || doc?.signToken || "";
     const signUrl = `${origin}/assinar/${token}`;
@@ -2140,21 +2152,50 @@ export default function VendaDetailPage(): JSX.Element {
                             >
                               {isSigned ? (
                                 <>
-                                  <CheckCircle2 className="h-2.5 w-2.5" /> Assinado
+                                  <CheckCircle2 className="h-2.5 w-2.5" /> Assinado pelo Cliente
                                 </>
                               ) : (
                                 <>
-                                  <Clock className="h-2.5 w-2.5" /> Aguardando Assinatura
+                                  <Clock className="h-2.5 w-2.5" /> Aguardando Cliente
                                 </>
                               )}
                             </span>
+
+                            {isContract && (
+                              <span
+                                className={cn(
+                                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border",
+                                  doc.companySignedAt || doc.isCompanySigned
+                                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                                    : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                                )}
+                              >
+                                {doc.companySignedAt || doc.isCompanySigned ? (
+                                  <>
+                                    <CheckCircle2 className="h-2.5 w-2.5" /> Assinado pelo
+                                    Integrador
+                                  </>
+                                ) : (
+                                  <>
+                                    <Clock className="h-2.5 w-2.5" /> Pendente Assinatura do
+                                    Integrador
+                                  </>
+                                )}
+                              </span>
+                            )}
                           </div>
 
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--color-muted-foreground)]">
                             <span>Gerado em: {formatDate(doc.createdAt)}</span>
+                            {(doc.companySignedAt || doc.isCompanySigned) && (
+                              <span className="text-emerald-700 dark:text-emerald-300 font-medium">
+                                Assinado pelo Integrador: {formatDate(doc.companySignedAt)}
+                              </span>
+                            )}
                             {isSigned && (
                               <span className="text-emerald-700 dark:text-emerald-300 font-medium">
-                                Assinado em: {formatDate(doc.signedAt)} por {doc.signerName}
+                                Assinado pelo Cliente: {formatDate(doc.signedAt)} por{" "}
+                                {doc.signerName}
                               </span>
                             )}
                             <span className="font-mono text-[10px]">
@@ -2203,11 +2244,29 @@ export default function VendaDetailPage(): JSX.Element {
                             </>
                           ) : (
                             <>
-                              {/* 1. Botão Principal: Editar Minuta */}
+                              {/* Botão de Assinatura do Integrador */}
+                              {isContract && !doc.companySignedAt && !doc.isCompanySigned && (
+                                <button
+                                  type="button"
+                                  onClick={() => setCompanySigningDoc(doc)}
+                                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors animate-pulse"
+                                  title="Assinar formalmente como integrador antes de enviar ao cliente"
+                                >
+                                  <FileSignature className="h-3.5 w-3.5" />
+                                  Assinar como Integrador
+                                </button>
+                              )}
+
+                              {/* 1. Botão: Editar Minuta */}
                               <button
                                 type="button"
                                 onClick={() => setSelectedDocForEditing(doc.id)}
-                                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors"
+                                className={cn(
+                                  "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors",
+                                  isContract && !doc.companySignedAt && !doc.isCompanySigned
+                                    ? "border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
+                                    : "bg-emerald-600 text-white hover:bg-emerald-700"
+                                )}
                                 title="Abrir minuta para edição em tempo real e adição de cláusulas"
                               >
                                 <FileEdit className="h-3.5 w-3.5" />
@@ -2234,7 +2293,7 @@ export default function VendaDetailPage(): JSX.Element {
                               {/* 3. Copiar Link de Assinatura */}
                               <button
                                 type="button"
-                                onClick={() => handleCopySignLink(token)}
+                                onClick={() => handleCopySignLink(token, doc)}
                                 className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-foreground)] shadow-sm hover:bg-[var(--color-muted)] transition-colors"
                                 title="Copiar link seguro para o cliente assinar"
                               >
@@ -2430,10 +2489,25 @@ export default function VendaDetailPage(): JSX.Element {
                         )}
                       </div>
 
+                      {(doc.companySignedAt || doc.isCompanySigned) && (
+                        <div className="pt-2 border-t border-[var(--color-border)] flex flex-wrap items-center gap-4 text-[11px] text-emerald-800 dark:text-emerald-300">
+                          <span>
+                            <strong>Integrador (CONTRATADA):</strong>{" "}
+                            {doc.companySignerName || "Representante Legal"}
+                          </span>
+                          <span>
+                            <strong>Data/Hora:</strong> {formatDate(doc.companySignedAt)}
+                          </span>
+                          <span>
+                            <strong>IP Registrado:</strong> {doc.companySignerIp || "—"}
+                          </span>
+                        </div>
+                      )}
+
                       {isSigned && (
                         <div className="pt-2 border-t border-[var(--color-border)] flex flex-wrap items-center gap-4 text-[11px]">
                           <span>
-                            <strong>Signatário:</strong> {doc.signerName}
+                            <strong>Cliente (CONTRATANTE):</strong> {doc.signerName}
                           </span>
                           <span>
                             <strong>Data/Hora:</strong> {formatDate(doc.signedAt)}
@@ -2479,6 +2553,22 @@ export default function VendaDetailPage(): JSX.Element {
           onClose={() => setSelectedDocForEditing(null)}
           onSaved={() => {
             loadSale();
+          }}
+        />
+      )}
+
+      {/* Modal de Assinatura do Integrador (CONTRATADA) */}
+      {companySigningDoc && (
+        <CompanySignModal
+          isOpen={Boolean(companySigningDoc)}
+          onClose={() => setCompanySigningDoc(null)}
+          saleId={saleId}
+          docId={companySigningDoc.id}
+          docTitle={companySigningDoc.title}
+          onSuccess={async () => {
+            await loadSale();
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 3000);
           }}
         />
       )}

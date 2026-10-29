@@ -193,3 +193,49 @@ export async function resetGlobalDocumentTemplate(
     body: JSON.stringify({ documentType }),
   });
 }
+
+export interface TenantSignatureInfo {
+  representativeName: string | null;
+  representativeCpf: string | null;
+  representativeSignature: string | null;
+}
+
+export async function getCompanySignature(): Promise<TenantSignatureInfo> {
+  return apiFetch("/sales/company-signature");
+}
+
+export async function updateCompanySignature(data: {
+  representativeName?: string;
+  representativeCpf?: string;
+  representativeSignature?: string;
+}): Promise<TenantSignatureInfo> {
+  return apiFetch("/sales/company-signature", {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function signCompanySaleDocument(
+  saleId: string,
+  docId: string,
+  data: {
+    signatureImage?: string;
+    signerName?: string;
+    signerCpf?: string;
+    saveAsDefault?: boolean;
+  }
+): Promise<{
+  success: boolean;
+  companySignedAt: string;
+  companySignerName: string;
+  companySignatureHash: string;
+  pdfUrl: string;
+}> {
+  return apiFetch(
+    `/sales/${encodeURIComponent(saleId)}/documents/${encodeURIComponent(docId)}/sign-company`,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    }
+  );
+}
