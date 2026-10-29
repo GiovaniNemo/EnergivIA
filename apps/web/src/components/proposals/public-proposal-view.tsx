@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Download, Loader2, Printer, FileSignature, CheckCircle2 } from "lucide-react";
+import { Download, Loader2, Printer } from "lucide-react";
 import { PreviewDocument } from "@/components/proposals/editor/preview-document";
 import { LoadingState } from "@/components/ui/loading-state";
 import {
@@ -156,28 +156,6 @@ export function PublicProposalView({ proposalId }: { proposalId: string }): JSX.
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              {data.zapsignStatus === "SIGNED" ? (
-                <a
-                  href={data.zapsignSignedPdfUrl || data.zapsignSignUrl || "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm transition-all"
-                >
-                  <CheckCircle2 className="h-4 w-4 text-white" />
-                  <span>Assinado Digitalmente</span>
-                </a>
-              ) : data.zapsignSignUrl ? (
-                <a
-                  href={data.zapsignSignUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-slate-950 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-sm transition-all"
-                >
-                  <FileSignature className="h-4 w-4" />
-                  <span>Assinar Proposta Digitalmente</span>
-                </a>
-              ) : null}
-
               <button
                 type="button"
                 onClick={handleDownloadPdf}

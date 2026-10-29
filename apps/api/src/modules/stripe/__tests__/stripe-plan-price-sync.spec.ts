@@ -92,10 +92,7 @@ describe("StripeService - Sincronização de Preços e Segurança de Assinatura"
         update: vi.fn(),
       },
       systemSetting: {
-        findUnique: vi.fn().mockResolvedValue({
-          key: "STRIPE_ZAPSIGN_ADDON_PRICE_ID",
-          value: "price_zapsign_5990",
-        }),
+        findUnique: vi.fn().mockResolvedValue(null),
         upsert: vi.fn(),
       },
     };
@@ -141,16 +138,6 @@ describe("StripeService - Sincronização de Preços e Segurança de Assinatura"
           currency: "brl",
           recurring: { interval: "month" },
           product: "prod_plus_existing",
-        };
-      }
-      if (priceId === "price_zapsign_5990") {
-        return {
-          id: "price_zapsign_5990",
-          active: true,
-          unit_amount: 5990,
-          currency: "brl",
-          recurring: { interval: "month" },
-          product: "prod_zapsign",
         };
       }
       return null;
@@ -204,16 +191,6 @@ describe("StripeService - Sincronização de Preços e Segurança de Assinatura"
           currency: "brl",
           recurring: { interval: "month" },
           product: "prod_plus_existing",
-        };
-      }
-      if (priceId === "price_zapsign_5990") {
-        return {
-          id: "price_zapsign_5990",
-          active: true,
-          unit_amount: 5990,
-          currency: "brl",
-          recurring: { interval: "month" },
-          product: "prod_zapsign",
         };
       }
       return null;

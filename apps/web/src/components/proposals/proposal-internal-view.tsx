@@ -49,7 +49,6 @@ import {
 } from "@/components/proposals/proposal-internal-ui";
 import { ProposalEquipmentEditorCard } from "@/components/proposals/proposal-equipment-editor-card";
 import { ProposalPaymentOptionsCard } from "@/components/proposals/proposal-payment-options-card";
-import { ProposalZapSignCard } from "@/components/proposals/proposal-zapsign-card";
 
 const _PDF_BRANDING = {
   primaryColor: "#059669",
@@ -882,26 +881,6 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
           <p className="mt-2 text-xs text-red-600 dark:text-red-400">{discountError}</p>
         ) : null}
       </section>
-
-      <ProposalZapSignCard
-        proposalId={proposal.id}
-        zapsignSignUrl={proposal.zapsignSignUrl}
-        zapsignStatus={proposal.zapsignStatus}
-        zapsignSignedPdfUrl={proposal.zapsignSignedPdfUrl}
-        onUpdated={({ zapsignSignUrl, zapsignStatus, zapsignDocToken }) => {
-          setProposal((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  zapsignSignUrl: zapsignSignUrl ?? prev.zapsignSignUrl,
-                  zapsignStatus: zapsignStatus ?? prev.zapsignStatus,
-                  zapsignDocToken: zapsignDocToken ?? prev.zapsignDocToken,
-                }
-              : null
-          );
-          showToast("success", "Link de assinatura digital gerado com sucesso!");
-        }}
-      />
 
       {currentOrganizationId && (
         <ProposalPaymentOptionsCard

@@ -22,7 +22,6 @@ import {
   Boxes,
   TrendingUp,
   Headphones,
-  FileSignature,
   Tag,
 } from "lucide-react";
 
@@ -47,7 +46,6 @@ interface SubscriptionData {
   planId: string;
   status: string;
   stripeSubscriptionId?: string;
-  zapsignAddonActive?: boolean;
   currentPeriodEnd: string;
   plan?: Plan;
 }
@@ -108,7 +106,6 @@ function MeusPlanosContent() {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
-  const [zapsignLoading, setZapsignLoading] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<{
     type: "success" | "error" | "info";
@@ -237,40 +234,6 @@ function MeusPlanosContent() {
       setToastMessage({ type: "error", text: msg });
     } finally {
       setCancelLoading(false);
-    }
-  };
-
-  const handleToggleZapSignAddon = async (enabled: boolean) => {
-    if (!currentOrganization?.id) return;
-    setZapsignLoading(true);
-    try {
-      const res = await fetch("/api/proxy/stripe/subscription/zapsign-addon", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tenantId: currentOrganization.id,
-          enabled,
-        }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || "Erro ao atualizar Assinatura Digital");
-      }
-
-      setToastMessage({
-        type: "success",
-        text: enabled
-          ? "Módulo de Assinatura Digital (+ R$ 89,90/mês) ativado com sucesso na sua assinatura!"
-          : "Módulo de Assinatura Digital desativado da sua assinatura.",
-      });
-      await refetchOrg();
-      await loadData();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Erro ao atualizar Assinatura Digital";
-      setToastMessage({ type: "error", text: msg });
-    } finally {
-      setZapsignLoading(false);
     }
   };
 
@@ -454,24 +417,6 @@ function MeusPlanosContent() {
                     <span>Cobrança automática via Stripe</span>
                   </div>
                 )}
-
-                <div className="flex items-center gap-2">
-                  <FileSignature className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  <span>
-                    Assinatura Digital:{" "}
-                    <strong
-                      className={
-                        subscription?.zapsignAddonActive || isLifetime || isSpecialAccess
-                          ? "text-emerald-700 dark:text-emerald-400"
-                          : "text-slate-500 dark:text-slate-400"
-                      }
-                    >
-                      {subscription?.zapsignAddonActive || isLifetime || isSpecialAccess
-                        ? "Ativa"
-                        : "Não contratada"}
-                    </strong>
-                  </span>
-                </div>
               </div>
             </div>
 
@@ -489,41 +434,18 @@ function MeusPlanosContent() {
                     Acesso Total Liberado
                   </div>
                 ) : (
-                  <>
-                    <button
-                      onClick={handleOpenPortal}
-                      disabled={portalLoading}
-                      className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800 text-[var(--color-foreground)] border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 font-medium text-xs sm:text-sm transition-all shadow-xs disabled:opacity-50 cursor-pointer"
-                    >
-                      {portalLoading ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      )}
-                      Gerenciar Faturas & Cartão
-                    </button>
-
-                    {!isSpecialAccess && !isLifetime && subscription && (
-                      <button
-                        onClick={() => handleToggleZapSignAddon(!subscription.zapsignAddonActive)}
-                        disabled={zapsignLoading}
-                        className={`inline-flex items-center gap-2 h-10 px-4 rounded-xl font-medium text-xs sm:text-sm transition-all shadow-xs disabled:opacity-50 cursor-pointer ${
-                          subscription.zapsignAddonActive
-                            ? "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
-                            : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20"
-                        }`}
-                      >
-                        {zapsignLoading ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <FileSignature className="w-3.5 h-3.5" />
-                        )}
-                        {subscription.zapsignAddonActive
-                          ? "Desativar Assinatura Digital"
-                          : "Ativar Assinatura Digital (+ R$ 89,90/mês)"}
-                      </button>
+                  <button
+                    onClick={handleOpenPortal}
+                    disabled={portalLoading}
+                    className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800 text-[var(--color-foreground)] border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 font-medium text-xs sm:text-sm transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                  >
+                    {portalLoading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <ExternalLink className="w-3.5 h-3.5" />
                     )}
-                  </>
+                    Gerenciar Faturas & Cartão
+                  </button>
                 )}
               </div>
 

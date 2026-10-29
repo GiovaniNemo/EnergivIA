@@ -429,12 +429,6 @@ model Proposal {
   clientDecisionComments String?  @map("client_decision_comments")
   clientSignatureName   String?   @map("client_signature_name")
   clientContactWhatsapp String?   @map("client_contact_whatsapp")
-  zapsignDocToken       String?   @map("zapsign_doc_token")
-  zapsignSignerToken    String?   @map("zapsign_signer_token")
-  zapsignSignUrl        String?   @map("zapsign_sign_url")
-  zapsignStatus         String?   @map("zapsign_status")
-  zapsignSignedPdfUrl   String?   @map("zapsign_signed_pdf_url")
-  zapsignSignedAt       DateTime? @map("zapsign_signed_at")
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   deletedAt       DateTime?
@@ -1422,8 +1416,6 @@ model Subscription {
   status               String   @default("active")
   stripeSubscriptionId String?  @unique @map("stripe_subscription_id")
   stripeCustomerId          String?  @map("stripe_customer_id")
-  zapsignAddonActive        Boolean  @default(false) @map("zapsign_addon_active")
-  zapsignSubscriptionItemId String?  @map("zapsign_subscription_item_id")
   currentPeriodEnd     DateTime @map("current_period_end")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")

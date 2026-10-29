@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import { useOrganization } from "@/components/providers/organization-provider";
-import { Tag, AlertTriangle, Loader2, X, ShieldCheck, FileSignature, Check } from "lucide-react";
-
-export const ZAPSIGN_ADDON_MONTHLY_PRICE = 89.9;
+import { Tag, AlertTriangle, Loader2, X, ShieldCheck } from "lucide-react";
 
 interface PaymentFormProps {
   planId: string;
@@ -31,14 +29,11 @@ export default function PaymentForm({
   planPrice,
   buttonText,
   className,
-  compactAddon = false,
+  compactAddon: _compactAddon = false,
 }: PaymentFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { currentOrganization } = useOrganization();
-
-  // Add-on ZapSign (R$ 59,90/mês) pré-marcado por padrão; o cliente pode desmarcar se não quiser
-  const [includeZapSignAddon, setIncludeZapSignAddon] = useState(true);
 
   // Coupon state
   const [showCouponInput, setShowCouponInput] = useState(false);
@@ -134,7 +129,6 @@ export default function PaymentForm({
           tenantId: currentOrganization.id,
           returnUrl,
           couponCode: effectiveCoupon || undefined,
-          includeZapSignAddon,
         }),
       });
 
@@ -173,64 +167,6 @@ export default function PaymentForm({
 
   return (
     <div className="w-full space-y-3">
-      {/* ADD-ON OPCIONAL ZAPSIGN EM LINHA ÚNICA (ENTERPRISE SAAS) */}
-      <div
-        role="checkbox"
-        aria-checked={includeZapSignAddon}
-        tabIndex={0}
-        onClick={() => setIncludeZapSignAddon((prev) => !prev)}
-        onKeyDown={(e) => {
-          if (e.key === " " || e.key === "Enter") {
-            e.preventDefault();
-            setIncludeZapSignAddon((prev) => !prev);
-          }
-        }}
-        className={`group cursor-pointer select-none rounded-xl border transition-all ${
-          compactAddon ? "p-2.5" : "p-3"
-        } ${
-          includeZapSignAddon
-            ? "bg-emerald-50/70 dark:bg-emerald-500/10 border-emerald-500/40 dark:border-emerald-500/30 shadow-xs hover:border-emerald-500/60"
-            : "bg-slate-50/60 dark:bg-white/[0.02] border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 opacity-80 hover:opacity-100"
-        }`}
-      >
-        <div className="flex items-start gap-2.5">
-          <div
-            className={`mt-0.5 w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
-              includeZapSignAddon
-                ? "bg-emerald-600 border-emerald-600 text-white shadow-xs"
-                : "bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 group-hover:border-slate-400 dark:group-hover:border-slate-500"
-            }`}
-          >
-            {includeZapSignAddon && <Check className="w-3 h-3 stroke-[3]" />}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <FileSignature
-                className={`w-3.5 h-3.5 shrink-0 transition-colors ${
-                  includeZapSignAddon
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-slate-400 dark:text-slate-500"
-                }`}
-              />
-              <span className="text-xs font-semibold text-[var(--color-foreground)] leading-tight">
-                Assinatura Digital de Contratos
-              </span>
-            </div>
-            <div className="mt-1.5 flex items-center gap-1.5">
-              <span
-                className={`text-[11px] font-bold px-2 py-0.5 rounded-full border inline-block transition-colors ${
-                  includeZapSignAddon
-                    ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/30"
-                    : "bg-slate-200/60 dark:bg-white/10 text-slate-500 dark:text-slate-400 border-slate-300/50 dark:border-white/10"
-                }`}
-              >
-                + R$ 89,90/mês
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* COUPON SECTION */}
       {!appliedCoupon && !showCouponInput ? (
         <button
