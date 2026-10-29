@@ -910,10 +910,10 @@
 | task-921 | Brainstorming: Apresentar design detalhado da arquitetura da solução | completed | Design apresentado e aprovado pelo usuário |
 | task-922 | Brainstorming: Criar documento de design e commitar | completed | Salvo em docs/plans/2026-10-29-rastreamento-parceiro-whatsapp-design.md e commitado |
 | task-923 | Transição: Invocar writing-plans para plano de execução | completed | Salvo em docs/plans/2026-10-29-rastreamento-parceiro-whatsapp-plan.md |
-| task-924 | Prisma Schema & DB: Adicionar modelo InboundLeadAttribution e relações | not-started | Modelo com phoneDigits, referralCode, salesRepId e relações em User e Tenant |
-| task-925 | Utilitário: Parser de tags de referral e normalizador de telefones | not-started | Testes e implementação de extractReferralCodeFromText e normalização |
-| task-926 | Backend WhatsApp: Interceptação no webhook, registro em InboundLeadAttribution e injeção de links com ref | not-started | Captura na mensagem inicial, gravação no banco e propagação de links com ref |
-| task-927 | Backend OrganizationsService: Cruzamento e amarração por telefone no cadastro de empresas | not-started | Fallback por telefone para atribuir salesRepId e referralCode automaticamente |
-| task-928 | Frontend Web: Rota /w/[code] de ponte rápida e gravação de cookie para o WhatsApp | not-started | Gravação imediata de cookie/storage e salto deep-link para wa.me com tag |
-| task-929 | Frontend Comercial: Exibição de Link do Bot e botão de compartilhar em grupos em SalesRepLinkCard | not-started | Abas/links duplos (Web e Bot) com texto pronto para grupos de integradores |
-| task-930 | Validação completa (testes automatizados Vitest, build API e Web), commit e push | not-started | Testes 100%, linters e builds validados |
+| task-924 | Prisma Schema & DB: Adicionar modelo InboundLeadAttribution e relações | completed | Tabela inbound_lead_attributions criada e sincronizada no Neon com db push |
+| task-925 | Utilitário: Parser de tags de referral e normalizador de telefones | completed | 11 testes Vitest aprovados para extractReferralCodeFromText, cleanPhoneDigits e buildPhoneMatchingVariants |
+| task-926 | Backend WhatsApp: Interceptação no webhook, registro em InboundLeadAttribution e injeção de links com ref | completed | Interceptação de ref na primeira mensagem, persistência em InboundLeadAttribution, propagação de links e 26 testes aprovados |
+| task-927 | Backend OrganizationsService: Cruzamento e amarração por telefone no cadastro de empresas | completed | Fallback de matching por telefone implementado e 4 testes aprovados no organizations-referral.spec.ts |
+| task-928 | Frontend Web: Rota /w/[code] de ponte rápida e gravação de cookie para o WhatsApp | completed | Rota /w/[code] criada com storeReferralCodeExplicit, salto para wa.me e fallback elegante |
+| task-929 | Frontend Comercial: Exibição de Link do Bot e botão de compartilhar em grupos em SalesRepLinkCard | completed | Card atualizado com links duplos (Bot no WhatsApp e Cadastro Web) e botão Divulgar no WhatsApp |
+| task-930 | Validação completa (testes automatizados Vitest, build API e Web), commit e push | completed | 41 testes Vitest passaram, ESLint limpo, builds NestJS e Next.js (88 rotas com /w/[code]) gerados e push sincronizado |

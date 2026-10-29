@@ -64,3 +64,16 @@ export function clearStoredReferralCode(): void {
     // Fail-safe silencioso
   }
 }
+
+export function storeReferralCodeExplicit(code?: string | null): string | null {
+  if (typeof window === "undefined") return null;
+  const sanitized = sanitizeReferralCode(code);
+  if (!sanitized) return null;
+  try {
+    localStorage.setItem(REFERRAL_STORAGE_KEY, sanitized);
+    document.cookie = `${REFERRAL_COOKIE_NAME}=${sanitized}; path=/; max-age=2592000; SameSite=Lax`;
+    return sanitized;
+  } catch {
+    return null;
+  }
+}

@@ -55,6 +55,7 @@ model Tenant {
   salesRep              User?                @relation("TenantSalesRep", fields: [salesRepId], references: [id], onDelete: SetNull)
   salesNotes            SalesActivityNote[]
   sales                 Sale[]
+  convertedInboundAttributions InboundLeadAttribution[] @relation("TenantAttribution")
 
   @@index([slug])
   @@index([deletedAt])
@@ -76,6 +77,27 @@ model TenantWhatsappInboundPhone {
   @@unique([phoneDigits])
   @@index([organizationId])
   @@map("tenant_whatsapp_inbound_phones")
+}
+
+model InboundLeadAttribution {
+  id                 String    @id @default(cuid())
+  phoneDigits        String    @unique @map("phone_digits")
+  referralCode       String    @map("referral_code")
+  salesRepId         String?   @map("sales_rep_id")
+  source             String    @default("whatsapp_bot") @map("source")
+  firstMessage       String?   @map("first_message") @db.Text
+  convertedTenantId  String?   @map("converted_tenant_id")
+  convertedAt        DateTime? @map("converted_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  salesRep           User?     @relation("SalesRepAttribution", fields: [salesRepId], references: [id], onDelete: SetNull)
+  convertedTenant    Tenant?   @relation("TenantAttribution", fields: [convertedTenantId], references: [id], onDelete: SetNull)
+
+  @@index([referralCode])
+  @@index([salesRepId])
+  @@index([phoneDigits])
+  @@map("inbound_lead_attributions")
 }
 
 enum CostCalculationType {
@@ -178,6 +200,7 @@ model User {
   commissionRate    Decimal?             @default(0.10) @db.Decimal(5, 4) @map("commission_rate")
   assignedTenants   Tenant[]             @relation("TenantSalesRep")
   salesNotes        SalesActivityNote[]
+  inboundLeadAttributions InboundLeadAttribution[] @relation("SalesRepAttribution")
 
   @@unique([tenantId, email])
   @@index([tenantId])

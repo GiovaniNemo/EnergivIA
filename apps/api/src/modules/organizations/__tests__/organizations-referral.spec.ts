@@ -62,6 +62,19 @@ describe("Organizations Referral Attribution", () => {
       proposalTemplate: {
         create: vi.fn().mockResolvedValue({ id: "tpl-1" }),
       },
+      inboundLeadAttribution: {
+        findFirst: vi.fn().mockImplementation(({ where }) => {
+          if (where?.phoneDigits?.in?.some((p: string) => p.includes("996851400"))) {
+            return Promise.resolve({
+              id: "attr-lead-123",
+              salesRepId: "user-rep-giovani",
+              referralCode: "giovani",
+            });
+          }
+          return Promise.resolve(null);
+        }),
+        update: vi.fn().mockResolvedValue({ id: "attr-lead-123" }),
+      },
     };
 
     service = new OrganizationsService(mockPrisma);
@@ -99,7 +112,7 @@ describe("Organizations Referral Attribution", () => {
     expect(result.salesRepId).toBeNull();
   });
 
-  it("should set salesRepId to null when referralCode is omitted", async () => {
+  it("should set salesRepId to null when referralCode is omitted and no phone attribution matches", async () => {
     const dto: CreateOrganizationDto = {
       name: "Solar Sem Indicacao",
       termsAccepted: true,
@@ -112,5 +125,28 @@ describe("Organizations Referral Attribution", () => {
     expect(createData.salesRepId).toBeNull();
     expect(createData.referralCode).toBeNull();
     expect(result.salesRepId).toBeNull();
+  });
+
+  it("should fallback to phone matching in InboundLeadAttribution when referralCode is omitted", async () => {
+    const dto: CreateOrganizationDto = {
+      name: "Solar Vinda do WhatsApp",
+      phone: "(34) 99685-1400",
+      termsAccepted: true,
+    };
+
+    const result = await service.create("user-owner-1", dto);
+
+    expect(mockPrisma.tenant.create).toHaveBeenCalled();
+    const createData = mockPrisma.tenant.create.mock.calls[0][0].data;
+    expect(createData.salesRepId).toBe("user-rep-giovani");
+    expect(createData.referralCode).toBe("giovani");
+    expect(result.salesRepId).toBe("user-rep-giovani");
+    expect(mockPrisma.inboundLeadAttribution.update).toHaveBeenCalledWith({
+      where: { id: "attr-lead-123" },
+      data: {
+        convertedTenantId: "org-new-1",
+        convertedAt: expect.any(Date),
+      },
+    });
   });
 });

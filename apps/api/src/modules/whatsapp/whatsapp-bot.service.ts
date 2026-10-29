@@ -61,6 +61,7 @@ import {
   formatInternationalPhone,
   type ContactVCardItem,
 } from "../leads/utils/vcard-generator";
+import { extractReferralCodeFromText, cleanPhoneDigits } from "./services/whatsapp-referral-parser";
 export type { WhatsappBotStep, WhatsappSessionData };
 
 interface WebhookMessage {
@@ -2941,7 +2942,8 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         this.logger.warn(
           `Novo número ${fromWaId} tentou usar o bot mas atingiu o limite de 3 cotações de teste gratuito.`
         );
-        const trialExceededMsg = this.buildGuestTrialExceededMessage();
+        const refCodeFromMeta = (existingConv?.metadata as Record<string, any>)?.["referralCode"];
+        const trialExceededMsg = this.buildGuestTrialExceededMessage(refCodeFromMeta);
         await this.whatsappCloud.sendTextMessage({
           phoneNumberId,
           toWaId: fromWaId,
@@ -3204,6 +3206,86 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
       }
     } else {
       incomingText = `[Mensagem do tipo ${msgType} recebida]`;
+    }
+
+    // Rastreamento e Atribuição de Parceiro Comercial via WhatsApp ("Coleira Dupla")
+    const detectedRefCode = extractReferralCodeFromText(incomingText);
+    const existingConvMeta = (conversation.metadata as Record<string, any>) || {};
+    let activeReferralCode = existingConvMeta["referralCode"] || null;
+
+    if (detectedRefCode) {
+      try {
+        const salesRep = await this.prisma.user.findFirst({
+          where: {
+            referralCode: { equals: detectedRefCode, mode: "insensitive" },
+            deletedAt: null,
+          },
+          select: { id: true, name: true, referralCode: true },
+        });
+
+        if (salesRep) {
+          activeReferralCode = salesRep.referralCode || detectedRefCode;
+          const cleanDigits = cleanPhoneDigits(fromWaId);
+
+          await this.prisma.inboundLeadAttribution.upsert({
+            where: { phoneDigits: cleanDigits },
+            create: {
+              phoneDigits: cleanDigits,
+              referralCode: activeReferralCode,
+              salesRepId: salesRep.id,
+              source: "whatsapp_bot",
+              firstMessage: incomingText?.slice(0, 1000) || null,
+            },
+            update: {
+              referralCode: activeReferralCode,
+              salesRepId: salesRep.id,
+              updatedAt: new Date(),
+            },
+          });
+
+          const nextMeta = {
+            ...existingConvMeta,
+            referralCode: activeReferralCode,
+            salesRepId: salesRep.id,
+            salesRepName: salesRep.name,
+          };
+          await this.prisma.conversation.update({
+            where: { id: conversation.id },
+            data: { metadata: nextMeta },
+          });
+          conversation.metadata = nextMeta;
+
+          this.logger.log(
+            `Atribuição de lead vinculada via WhatsApp: ${cleanDigits} -> Parceiro ${salesRep.name} (${activeReferralCode})`
+          );
+        }
+      } catch (refErr) {
+        this.logger.warn("Erro ao vincular indicação de parceiro no WhatsApp:", refErr);
+      }
+    } else if (!activeReferralCode) {
+      try {
+        const cleanDigits = cleanPhoneDigits(fromWaId);
+        const savedAttribution = await this.prisma.inboundLeadAttribution.findUnique({
+          where: { phoneDigits: cleanDigits },
+          include: { salesRep: { select: { id: true, name: true } } },
+        });
+        if (savedAttribution) {
+          activeReferralCode = savedAttribution.referralCode;
+          const nextMeta = {
+            ...existingConvMeta,
+            referralCode: savedAttribution.referralCode,
+            salesRepId: savedAttribution.salesRepId,
+            salesRepName: savedAttribution.salesRep?.name || null,
+          };
+          await this.prisma.conversation.update({
+            where: { id: conversation.id },
+            data: { metadata: nextMeta },
+          });
+          conversation.metadata = nextMeta;
+        }
+      } catch {
+        // Fail-safe silencioso
+      }
     }
 
     const isAudioMsg = msgType === "audio" || msgType === "voice";
@@ -5117,12 +5199,20 @@ Regras estritas:
     );
   }
 
-  public buildGuestGreetingMenu(contactName?: string, trialQuotesRemaining = 3): string {
+  public buildGuestGreetingMenu(
+    contactName?: string,
+    trialQuotesRemaining = 3,
+    partnerName?: string
+  ): string {
     const greeting = this.getGreetingText(contactName);
+    const partnerNotice = partnerName
+      ? `_(Indicação confirmada pelo parceiro *${partnerName}*)_\n`
+      : "";
     return (
       `${greeting}\n\n` +
       `Sou seu assistente de vendas e dimensionamento da *_EnergivIA._*\n\n` +
       `🎁 *Você ganhou 3 cotações completas gratuitas de teste!*\n` +
+      (partnerNotice ? `${partnerNotice}` : "") +
       `_(Restam ${trialQuotesRemaining} cotações no seu teste gratuito)_\n\n` +
       `*_Como posso ajudar você a gerar orçamentos hoje?_*\n\n` +
       `> 1️⃣ *Enviar fatura de energia* (PDF ou foto)\n` +
@@ -5135,12 +5225,16 @@ Regras estritas:
     );
   }
 
-  public buildGuestTrialExceededMessage(): string {
+  public buildGuestTrialExceededMessage(referralCode?: string | null): string {
+    const plansUrl = referralCode
+      ? `https://www.energivia.com.br/gestao/meus-planos?ref=${encodeURIComponent(referralCode)}`
+      : `https://www.energivia.com.br/gestao/meus-planos`;
+
     return (
       `Olá! ☀️ Você já utilizou suas *3 cotações gratuitas de degustação* da EnergivIA.\n\n` +
       `Esperamos que tenha gostado da velocidade e precisão das propostas comerciais! 🚀\n\n` +
       `Para continuar gerando propostas comerciais ilimitadas com IA, personalizar o valor por kWp, usar o logotipo da sua empresa e cadastrar seus próprios clientes, escolha o seu plano em:\n` +
-      `👉 *https://www.energivia.com.br/gestao/meus-planos*`
+      `👉 *${plansUrl}*`
     );
   }
 
@@ -5474,9 +5568,10 @@ ${catalogContext}`;
     const trialStatus =
       isGuestTrial && this.guestTrial ? this.guestTrial.getGuestTrialStatus(conversation) : null;
 
+    const partnerName = convMeta["salesRepName"] || null;
     const getGreetingMenu = () => {
       if (isGuestTrial && trialStatus) {
-        return this.buildGuestGreetingMenu(resolvedContactName, trialStatus.remaining);
+        return this.buildGuestGreetingMenu(resolvedContactName, trialStatus.remaining, partnerName);
       }
       return this.buildGreetingMenu(resolvedContactName);
     };
@@ -7083,7 +7178,7 @@ ${catalogContext}`;
 
         if (isGuestTrial && trialStatus) {
           if (trialStatus.remaining <= 0) {
-            return this.buildGuestTrialExceededMessage();
+            return this.buildGuestTrialExceededMessage(convMeta["referralCode"]);
           }
           return (
             `Vamos iniciar uma nova cotação solar! ☀️\n\n` +
@@ -7144,7 +7239,7 @@ ${catalogContext}`;
         sessionCtx.clientWhatsapp = undefined;
 
         if (isGuestTrial && trialStatus && trialStatus.remaining <= 0) {
-          return this.buildGuestTrialExceededMessage();
+          return this.buildGuestTrialExceededMessage(convMeta["referralCode"]);
         }
 
         // Se for saudação ("oi", "olá", etc.) ou proposta expirada sem ser seleção de opção específica:
@@ -8235,12 +8330,17 @@ ${catalogContext}`;
       const estimatedGenerationKwh =
         selectedQuote.estimatedGeneration || Math.round(selectedQuote.kwp * 130);
 
+      const refCodeFromConv = (conversation?.metadata as Record<string, any>)?.["referralCode"];
+      const registerUrl = refCodeFromConv
+        ? `https://www.energivia.com.br/cadastro?ref=${encodeURIComponent(refCodeFromConv)}`
+        : `https://www.energivia.com.br`;
+
       const trialCounterText = isGuestTrial
         ? `📊 *Cotação [${trialQuotesCount || 1} de 3] gerada com sucesso!*\n` +
           (trialQuotesRemaining > 0
             ? `_(Você ainda possui ${trialQuotesRemaining} cotaç${trialQuotesRemaining === 1 ? "ão gratuita" : "ões gratuitas"} de teste)_\n\n`
             : `_(Você utilizou suas 3 cotações de teste gratuito)_\n\n`) +
-          `💡 *Dica:* Na plataforma oficial da EnergivIA você pode personalizar sua logo, criar seus próprios modelos de proposta, gerenciar clientes e definir suas margens de lucro: *https://www.energivia.com.br*\n\n`
+          `💡 *Dica:* Na plataforma oficial da EnergivIA você pode personalizar sua logo, criar seus próprios modelos de proposta, gerenciar clientes e definir suas margens de lucro: *${registerUrl}*\n\n`
         : "";
 
       const integratorSummaryMsg =

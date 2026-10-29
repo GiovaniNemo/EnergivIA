@@ -16,6 +16,7 @@ import { EmailService } from "../../common/email/email.service";
 import { getTenantPlanDetails } from "../../common/utils/plan-limits";
 import { DEFAULT_PROPOSAL_TEMPLATE_CONFIG } from "@energivia/shared-types";
 import { stripCnpjNumbersFromCompanyName } from "@energivia/utils";
+import { buildPhoneMatchingVariants } from "../whatsapp/services/whatsapp-referral-parser";
 
 import { softDeleteWhere as soft } from "../../prisma/soft-delete";
 
@@ -373,6 +374,7 @@ export class OrganizationsService {
     const finalIp = clientInfo?.ip ?? null;
 
     const rawRef = dto.referralCode?.trim() || dto.referredBy?.trim() || null;
+    let matchedAttributionId: string | null = null;
     let assignedSalesRepId: string | null = null;
     let validReferralCode: string | null = null;
 
@@ -387,6 +389,35 @@ export class OrganizationsService {
       if (salesRepUser) {
         assignedSalesRepId = salesRepUser.id;
         validReferralCode = salesRepUser.referralCode || rawRef;
+      }
+    }
+
+    // Se não veio código de indicação explícito, verifica se o telefone do integrador
+    // foi capturado previamente pelo WhatsApp Bot (InboundLeadAttribution - "Coleira Dupla")
+    if (!assignedSalesRepId) {
+      const candidatePhones = [dto.phone, user?.phone].filter(Boolean) as string[];
+      for (const phoneStr of candidatePhones) {
+        const variants = buildPhoneMatchingVariants(phoneStr);
+        if (variants.length > 0 && this.prisma.inboundLeadAttribution?.findFirst) {
+          try {
+            const attribution = await this.prisma.inboundLeadAttribution.findFirst({
+              where: {
+                phoneDigits: { in: variants },
+                salesRepId: { not: null },
+              },
+              select: { id: true, referralCode: true, salesRepId: true },
+            });
+
+            if (attribution && attribution.salesRepId) {
+              assignedSalesRepId = attribution.salesRepId;
+              validReferralCode = attribution.referralCode;
+              matchedAttributionId = attribution.id;
+              break;
+            }
+          } catch (attrErr) {
+            this.logger.warn("Erro ao buscar atribuição por telefone:", attrErr);
+          }
+        }
       }
     }
 
@@ -462,6 +493,21 @@ export class OrganizationsService {
         createdById: userId,
       },
     });
+
+    // Se o lead foi atribuído via WhatsApp, marca a conversão em InboundLeadAttribution
+    if (matchedAttributionId && this.prisma.inboundLeadAttribution?.update) {
+      try {
+        await this.prisma.inboundLeadAttribution.update({
+          where: { id: matchedAttributionId },
+          data: {
+            convertedTenantId: org.id,
+            convertedAt: new Date(),
+          },
+        });
+      } catch (attrErr) {
+        this.logger.warn("Erro ao registrar conversão em InboundLeadAttribution:", attrErr);
+      }
+    }
 
     // Registra auditoria na tabela oficial de termos de aceite
     await this.prisma.termsAcceptanceLog.create({
