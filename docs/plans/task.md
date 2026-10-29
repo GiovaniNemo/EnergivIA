@@ -860,7 +860,3 @@
 | task-869 | Frontend: Página de Gestão de Documentos Padrão em /configuracoes/documentos | completed | Interface moderna com abas Contrato e Procuração, editor A4, tags dinâmicas copiáveis e ações de salvar/restaurar |
 | task-870 | Frontend: Links de navegação em Configurações, Menu Lateral e aviso de escopo em vendas/[id] | completed | Card em /configuracoes, item no menu, busca global e link direto na ficha da venda para editar o modelo padrão |
 | task-871 | Validação completa (testes automatizados, build, lint), commit e push das alterações | completed | 37 testes Vitest sales aprovados, ESLint limpo, build NestJS e build Next.js (87 rotas) aprovados |
-| task-872 | Estruturar documento HTML executivo editorial com layout A4, tipografia, capa, sumário e fluxogramas da plataforma | completed | Criado docs/fluxograma-plataforma-energivIA.html com 8 capítulos executivos e diagramas vetoriais Mermaid |
-| task-873 | Desenvolver script de compilação em PDF com Puppeteer e renderização de diagramas vetoriais Mermaid | completed | Desenvolvido scripts/generate-flowchart-pdf.js com cabeçalho, rodapé oficial e numeração nativa |
-| task-874 | Gerar e validar o PDF oficial docs/EnergivIA_Fluxograma_Completo_da_Plataforma.pdf | completed | PDF de 8 páginas gerado com sucesso (608 KB), sem quebras artificiais e 100% legível |
-| task-875 | Validação final, commit e push para o repositório remoto | completed | Artefatos oficiais documentados e sincronizados com a branch main |
