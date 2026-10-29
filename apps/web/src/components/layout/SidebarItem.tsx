@@ -50,16 +50,18 @@ export function SidebarItem({
           ? "mx-auto h-10 w-10 justify-center rounded-xl p-0"
           : "mx-2.5 h-10 w-[calc(100%-1.25rem)] gap-3 rounded-xl px-3 py-2",
         disabled
-          ? "text-[var(--color-muted-foreground)] opacity-50 cursor-not-allowed hover:bg-transparent bg-black/5 dark:bg-black/20"
+          ? "text-slate-500/50 dark:text-slate-500/50 opacity-50 cursor-not-allowed hover:bg-transparent bg-black/5 dark:bg-black/20"
           : active
-            ? "bg-emerald-500/15 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 font-semibold border border-emerald-500/25 shadow-xs"
-            : "text-[var(--color-muted-foreground)] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] hover:text-[var(--color-foreground)] border border-transparent"
+            ? "bg-emerald-500/20 text-emerald-700 dark:bg-emerald-500/25 dark:text-emerald-200 font-semibold border border-emerald-500/35 shadow-[0_0_15px_-3px_rgba(16,185,129,0.25)]"
+            : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-emerald-500/10 dark:hover:bg-emerald-500/15 hover:border-emerald-500/20 border border-transparent"
       )}
     >
       <Icon
         className={cn(
-          "h-[1.15rem] w-[1.15rem] shrink-0 transition-transform duration-200 group-hover:scale-105",
-          active ? "text-emerald-600 dark:text-emerald-400" : "opacity-80"
+          "h-[1.15rem] w-[1.15rem] shrink-0 transition-all duration-200 group-hover:scale-105",
+          active
+            ? "text-emerald-600 dark:text-emerald-400"
+            : "text-slate-500 dark:text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors"
         )}
       />
       {!collapsed ? (
@@ -76,8 +78,8 @@ export function SidebarItem({
                   : disabled
                     ? "bg-emerald-500/15 text-emerald-400 opacity-90"
                     : active
-                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                      : "bg-white/10 text-[var(--color-muted-foreground)]"
+                      ? "bg-emerald-500/25 text-emerald-200 border border-emerald-500/40"
+                      : "bg-black/10 dark:bg-white/10 text-slate-700 dark:text-slate-200"
               )}
             >
               {badge}

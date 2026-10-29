@@ -511,7 +511,7 @@ export default function DocumentTemplatesSettingsPage(): JSX.Element {
             </p>
           </div>
         ) : (
-          <div className="flex justify-center bg-slate-100 dark:bg-slate-950/60 p-4 sm:p-8 overflow-y-auto overflow-x-auto max-h-[calc(100vh-230px)] min-h-[640px]">
+          <div className="flex justify-center items-start bg-slate-200/80 dark:bg-[#060a10] p-4 sm:p-8 overflow-y-auto overflow-x-auto max-h-[calc(100vh-230px)] min-h-[640px]">
             <style>{`
             .contract-editor-sheet {
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -519,6 +519,9 @@ export default function DocumentTemplatesSettingsPage(): JSX.Element {
               line-height: 1.45;
               color: #1e293b;
               background-color: #ffffff !important;
+              height: fit-content;
+              min-height: 1123px;
+              box-sizing: border-box;
             }
             .contract-editor-sheet .header {
               border-bottom: 2px solid #0f172a;
@@ -659,12 +662,12 @@ export default function DocumentTemplatesSettingsPage(): JSX.Element {
             }
           `}</style>
 
-            <div className="w-full max-w-[850px] min-h-[1100px] bg-white rounded-lg shadow-xl border border-slate-300 p-8 sm:p-12 contract-editor-sheet my-2">
+            <div className="w-full max-w-[850px] min-h-[1123px] h-fit shrink-0 bg-white rounded-lg shadow-xl border border-slate-300 p-8 sm:p-14 contract-editor-sheet my-4">
               <div
                 ref={editorRef}
                 contentEditable
                 suppressContentEditableWarning
-                className="outline-none min-h-[950px] focus:ring-1 focus:ring-emerald-500/20 rounded p-1"
+                className="outline-none min-h-[950px] h-fit focus:ring-1 focus:ring-emerald-500/20 rounded p-1"
               />
             </div>
           </div>

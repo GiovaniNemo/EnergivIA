@@ -56,7 +56,7 @@ export function AuthenticatedShell({ children }: { children: ReactNode }): JSX.E
                 />
                 {/* Camada 3: Luz de apoio na lateral esquerda atrás da sidebar */}
                 <div
-                  className="absolute top-16 -left-20 h-[900px] w-[500px] rounded-full bg-[radial-gradient(ellipse_60%_60%_at_30%_40%,rgba(16,185,129,0.07)_0%,transparent_75%)] dark:bg-[radial-gradient(ellipse_60%_60%_at_30%_40%,rgba(16,185,129,0.09)_0%,transparent_75%)]"
+                  className="absolute top-16 -left-20 h-[900px] w-[500px] rounded-full bg-[radial-gradient(ellipse_60%_60%_at_30%_40%,rgba(16,185,129,0.12)_0%,rgba(20,184,166,0.04)_50%,transparent_75%)] dark:bg-[radial-gradient(ellipse_60%_60%_at_30%_40%,rgba(16,185,129,0.18)_0%,rgba(20,184,166,0.06)_50%,transparent_75%)]"
                   style={{ contain: "strict" }}
                 />
                 {/* Camada 4: Micro-textura arquitetônica 100% contínua (sem corte de máscara elíptica) */}

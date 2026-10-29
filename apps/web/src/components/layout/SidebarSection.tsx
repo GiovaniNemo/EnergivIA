@@ -23,11 +23,11 @@ export function SidebarSection({
   return (
     <section className="space-y-1">
       {!collapsed ? (
-        <p className="px-5 pb-1 pt-2.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]/80 transition-opacity duration-200 animate-in fade-in-50">
+        <p className="px-5 pb-1 pt-2.5 text-[10.5px] font-bold uppercase tracking-[0.16em] text-emerald-600/90 dark:text-emerald-400/90 transition-opacity duration-200 animate-in fade-in-50">
           {label}
         </p>
       ) : (
-        <div className="my-2 mx-auto w-6 border-t border-black/[0.08] dark:border-white/[0.10]" />
+        <div className="my-2 mx-auto w-6 border-t border-emerald-500/20 dark:border-emerald-500/30" />
       )}
       {items.map((item) => (
         <SidebarItem
