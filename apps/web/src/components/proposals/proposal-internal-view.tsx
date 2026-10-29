@@ -32,6 +32,7 @@ import {
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { listProposalTemplates, type ProposalTemplateEntity } from "@/lib/proposal-templates-api";
 import { convertProposalToSale } from "@/lib/sales-api";
+import { notifyPipelineUpdated } from "@/lib/pipeline-sync";
 import { useOrganization } from "@/components/providers/organization-provider";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -386,6 +387,12 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
     setConvertingToSale(true);
     try {
       const sale = await convertProposalToSale(proposal.id);
+      notifyPipelineUpdated({
+        dealId: proposal.dealId ?? undefined,
+        leadId: proposal.deal?.lead?.id,
+        stage: "WON",
+        source: "proposal",
+      });
       showToast("success", "Proposta convertida em venda com sucesso!");
       router.push(`/vendas/${sale.id}`);
     } catch (e) {

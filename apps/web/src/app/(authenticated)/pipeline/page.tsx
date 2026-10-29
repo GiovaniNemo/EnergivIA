@@ -35,6 +35,7 @@ import { PipelineTableView } from "./PipelineTableView";
 import { PipelinePrioridadesView } from "./PipelinePrioridadesView";
 import type { ClosedDealStatus } from "@/lib/pipeline-deal";
 import { CloseDealModal } from "./CloseDealModal";
+import { notifyPipelineUpdated, usePipelineSync } from "@/lib/pipeline-sync";
 import { Deal360Drawer } from "@/components/deal-360/Deal360Drawer";
 
 const STAGE_ORDER: DealStage[] = ["novo", "contato", "proposta", "negociacao", "fechado"];
@@ -458,6 +459,12 @@ export default function PipelinePage(): JSX.Element {
     void loadDeals();
   }, [loadDeals]);
 
+  usePipelineSync((payload) => {
+    if (payload?.source !== "pipeline") {
+      void loadDeals();
+    }
+  });
+
   useEffect(() => {
     if (!currentOrganizationId) return;
     let alive = true;
@@ -630,9 +637,16 @@ export default function PipelinePage(): JSX.Element {
     if (!currentOrganizationId || !item.dealId) return;
     if (fromStage !== toStage) {
       try {
+        const targetApiStage = mapUiStageToApi(toStageTyped);
         await patchDeal(currentOrganizationId, item.dealId, {
-          stage: mapUiStageToApi(toStageTyped),
+          stage: targetApiStage,
           lostReason: null,
+        });
+        notifyPipelineUpdated({
+          dealId: item.dealId,
+          leadId: item.id,
+          stage: targetApiStage,
+          source: "pipeline",
         });
       } catch {
         await loadDeals();
@@ -680,6 +694,12 @@ export default function PipelinePage(): JSX.Element {
       nextActionAt:
         input.status === "postponed" && input.postponedDate ? input.postponedDate : null,
       nextActionType: input.status === "postponed" ? (input.note ?? "Follow-up adiado") : undefined,
+    });
+    notifyPipelineUpdated({
+      dealId: deal.dealId,
+      leadId: deal.id,
+      stage: input.status === "won" ? "WON" : "LOST",
+      source: "pipeline",
     });
     await loadDeals();
   }

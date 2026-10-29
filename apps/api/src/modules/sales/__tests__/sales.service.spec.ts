@@ -23,6 +23,12 @@ describe("SalesService", () => {
       lead: {
         update: vi.fn(),
       },
+      deal: {
+        update: vi.fn(),
+      },
+      leadActivityLog: {
+        create: vi.fn(),
+      },
       tenant: {
         findUnique: vi.fn(),
         update: vi.fn(),
@@ -114,6 +120,18 @@ describe("SalesService", () => {
       expect(result.documentNumber).toBe("12345678900");
       expect(result.sellerName).toBe("Vendedor Alpha");
       expect(result.status).toBe("AWAITING_ANALYSIS");
+      expect(mockPrisma.deal.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "deal-1" },
+          data: expect.objectContaining({ stage: "WON" }),
+        })
+      );
+      expect(mockPrisma.proposal.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "prop-123" },
+          data: expect.objectContaining({ status: "ACCEPTED" }),
+        })
+      );
     });
   });
 

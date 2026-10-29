@@ -79,6 +79,19 @@ export class SalesService {
     }
 
     if (proposal.sale) {
+      if (proposal.dealId && proposal.deal?.stage !== "WON") {
+        await this.prisma.deal
+          .update({
+            where: { id: proposal.dealId },
+            data: {
+              stage: "WON",
+              temperature: "HOT",
+              lastContactAt: new Date(),
+              lostReason: null,
+            },
+          })
+          .catch(() => {});
+      }
       return proposal.sale;
     }
 
@@ -213,16 +226,57 @@ export class SalesService {
     });
 
     // Se a proposta estava em DRAFT ou SENT, atualizar para ACCEPTED automaticamente
+    const now = new Date();
     try {
       if (proposal.status !== "ACCEPTED") {
         await this.prisma.proposal.update({
           where: { id: proposal.id },
-          data: { status: "ACCEPTED" },
+          data: {
+            status: "ACCEPTED",
+            clientDecision: "ACCEPT",
+            clientDecisionAt: now,
+          },
         });
       }
     } catch (err) {
       this.logger.warn(
         `Não foi possível atualizar status da proposta ${proposal.id} para ACCEPTED: ${err}`
+      );
+    }
+
+    // Avançar a Negociação (Deal) do cliente para o estágio WON ("Fechado / Ganho")
+    try {
+      if (proposal.dealId) {
+        await this.prisma.deal.update({
+          where: { id: proposal.dealId },
+          data: {
+            stage: "WON",
+            temperature: "HOT",
+            lastContactAt: now,
+            lostReason: null,
+          },
+        });
+
+        if (proposal.deal?.leadId) {
+          await this.prisma.leadActivityLog.create({
+            data: {
+              tenantId,
+              leadId: proposal.deal.leadId,
+              kind: "PROPOSAL_ACCEPTED",
+              label: "Proposta aceita e convertida em venda",
+              meta: {
+                proposalId: proposal.id,
+                saleId: sale.id,
+                saleNumber: sale.saleNumber,
+              },
+              occurredAt: now,
+            },
+          });
+        }
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Não foi possível avançar o deal da proposta ${proposal.id} para WON: ${err}`
       );
     }
 

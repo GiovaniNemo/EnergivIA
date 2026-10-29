@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { DealStageBadge } from "@/app/(authenticated)/leads/deal-stage-badge";
 import { convertProposalToSale } from "@/lib/sales-api";
+import { notifyPipelineUpdated } from "@/lib/pipeline-sync";
 
 const STATUS_LABEL: Record<string, string> = {
   DRAFT: "Rascunho",
@@ -117,6 +118,10 @@ export default function ProposalsPage(): JSX.Element {
     try {
       setConvertingId(proposalId);
       const sale = await convertProposalToSale(proposalId);
+      notifyPipelineUpdated({
+        stage: "WON",
+        source: "proposal",
+      });
       router.push(`/vendas/${sale.id}`);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Erro ao converter proposta em venda.");

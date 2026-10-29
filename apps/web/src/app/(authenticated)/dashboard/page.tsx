@@ -45,19 +45,15 @@ import {
   formatPercent,
 } from "@/components/dashboard/animated-number";
 
+import {
+  DashboardKanban,
+  DASHBOARD_STAGE_DEFS,
+  type DashboardDealItem,
+} from "@/components/dashboard/DashboardKanban";
+
 const ACCEPTED_BILL_TYPES =
   ".pdf,.jpg,.jpeg,.png,.heic,.webp,application/pdf,image/jpeg,image/png,image/webp,image/heic";
 const MAX_BILL_BYTES = 10 * 1024 * 1024;
-
-type StageKey = "novo" | "contato" | "proposta" | "negociacao" | "fechado";
-
-const STAGE_DEFS: { key: StageKey; label: string; dealStage: DealStage; color: string }[] = [
-  { key: "novo", label: "Novo", dealStage: "NEW", color: "#94a3b8" },
-  { key: "contato", label: "Contato", dealStage: "CONTACTED", color: "#2563eb" },
-  { key: "proposta", label: "Proposta", dealStage: "PROPOSAL", color: "#7c3aed" },
-  { key: "negociacao", label: "Negociação", dealStage: "NEGOTIATION", color: "#059669" },
-  { key: "fechado", label: "Fechado", dealStage: "WON", color: "#334155" },
-];
 
 const FEED_ICON_STYLES: Record<"success" | "info" | "neutral", { bg: string; fg: string }> = {
   success: { bg: "#e8f5e9", fg: "#388e3c" },
@@ -362,23 +358,25 @@ export default function DashboardPage(): JSX.Element {
     return items.sort((a, b) => b.sortKey - a.sortKey).slice(0, 5);
   }, [leads, sentProposals, isOwnerOrAdmin]);
 
-  const pipeline = useMemo(() => {
-    return STAGE_DEFS.map((def) => {
-      const inStage = leads.filter((l) => l.latestDealStage === def.dealStage);
+  const dashboardDeals = useMemo<DashboardDealItem[]>(() => {
+    return leads.map((l) => {
+      const dealStage: DealStage = l.latestDealStage ?? "NEW";
+      const stageDef =
+        DASHBOARD_STAGE_DEFS.find((d) => d.dealStage === dealStage) ?? DASHBOARD_STAGE_DEFS[0];
+
       return {
-        ...def,
-        count: inStage.length,
-        deals: inStage.slice(0, 4).map((l) => ({
-          id: l.id,
-          name: l.name,
-          meta: l.company ?? l.source ?? "—",
-          value: l.latestDealValue ? formatBRL(asNumber(l.latestDealValue)) : "",
-          badge: l.latestDealProposalSentAt
-            ? `Enviada · ${relativeTime(l.latestDealProposalSentAt)}`
-            : l.source
-              ? `${l.source} · ${relativeTime(l.createdAt)}`
-              : relativeTime(l.updatedAt),
-        })),
+        id: l.id,
+        dealId: l.latestDealId ?? null,
+        name: l.name,
+        meta: l.company ?? l.source ?? "—",
+        value: l.latestDealValue ? formatBRL(asNumber(l.latestDealValue)) : "",
+        badge: l.latestDealProposalSentAt
+          ? `Enviada · ${relativeTime(l.latestDealProposalSentAt)}`
+          : l.source
+            ? `${l.source} · ${relativeTime(l.createdAt)}`
+            : relativeTime(l.updatedAt),
+        stageKey: stageDef.key,
+        dealStage,
       };
     });
   }, [leads]);
@@ -809,54 +807,11 @@ export default function DashboardPage(): JSX.Element {
             Filtros
           </Link>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {pipeline.map((stage) => (
-            <div
-              key={stage.key}
-              className="min-h-[280px] rounded-xl border border-[var(--color-border)] bg-black/[0.02] dark:bg-black/30 backdrop-blur-xs p-3"
-            >
-              <div className="mb-2.5 h-[3px] rounded-full" style={{ background: stage.color }} />
-              <h4 className="mb-2.5 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-                {stage.label}
-                <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-2 py-px font-mono text-[11px] text-[var(--color-foreground)]">
-                  {stage.count}
-                </span>
-              </h4>
-              {stage.deals.length === 0 ? (
-                <p className="py-6 text-center text-[11px] text-[var(--color-muted-foreground)]">
-                  {isLoading ? "Carregando..." : "Sem negócios."}
-                </p>
-              ) : (
-                stage.deals.map((deal) => (
-                  <Link
-                    key={deal.id}
-                    href={`/leads/${deal.id}`}
-                    className={`mb-2 block cursor-pointer rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all hover:border-emerald-500/40 hover:-translate-y-0.5 ${
-                      stage.key === "fechado" ? "opacity-85" : ""
-                    }`}
-                  >
-                    <div className="text-[13px] font-semibold text-[var(--color-foreground)]">
-                      {deal.name}
-                    </div>
-                    <div className="mt-1 flex items-center justify-between text-[11px] text-[var(--color-muted-foreground)]">
-                      <span className="truncate">{deal.meta}</span>
-                      {deal.value ? (
-                        <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                          {deal.value}
-                        </span>
-                      ) : null}
-                    </div>
-                    {deal.badge ? (
-                      <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-700 dark:text-emerald-300">
-                        {deal.badge}
-                      </span>
-                    ) : null}
-                  </Link>
-                ))
-              )}
-            </div>
-          ))}
-        </div>
+        <DashboardKanban
+          initialItems={dashboardDeals}
+          organizationId={orgId}
+          isLoading={isLoading}
+        />
       </section>
 
       <BillQuickStartDialog
