@@ -139,7 +139,7 @@
     --font-mono: var(--font-geist-mono), monospace;
     --font-heading: var(--font-geist-sans), system-ui, sans-serif;
     --color-primary: var(--color-primary-600);
-    --color-sidebar: #ffffff;
+    --color-sidebar: rgba(255, 255, 255, 0.65);
     --sidebar-active-border: rgba(22, 163, 74, 0.45);
     --sidebar-active-text: #15803d;
     --sidebar-active-bg: linear-gradient(
@@ -198,7 +198,7 @@
     --color-destructive-foreground: #ffffff;
     --color-success: #1de9b6;
     --color-success-dark: #14b8a6;
-    --color-sidebar: rgba(2, 6, 15, 0.88);
+    --color-sidebar: rgba(9, 13, 22, 0.62);
     --sidebar-active-border: rgba(45, 212, 191, 0.85);
     --sidebar-active-text: #66f0df;
     --sidebar-active-bg: linear-gradient(
@@ -1660,74 +1660,74 @@ html.hide-scrollbar,
 
 /* Glassmorphism Navigation Bar Utilities (Topbar & Sidebar) */
 .glass-nav-topbar {
-  background-color: rgba(255, 255, 255, 0.72);
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.50) 100%);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  background-color: rgba(255, 255, 255, 0.62);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.15) 100%);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow:
     0 16px 36px -10px rgba(0, 0, 0, 0.06),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.40);
+    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.35);
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
-  isolation: isolate;
-  contain: layout;
 }
 
 .dark .glass-nav-topbar {
-  background-color: rgba(2, 6, 15, 0.85) !important;
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.00) 100%) !important;
-  backdrop-filter: blur(20px) saturate(150%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background-color: rgba(9, 13, 22, 0.62) !important;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.01) 100%) !important;
+  backdrop-filter: blur(24px) saturate(190%) contrast(105%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(190%) contrast(105%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.22) !important;
   box-shadow:
-    0 20px 48px -12px rgba(0, 0, 0, 0.85),
-    0 0 20px -4px rgba(16, 185, 129, 0.04),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.10) !important;
+    0 20px 48px -12px rgba(0, 0, 0, 0.70),
+    0 0 20px -4px rgba(16, 185, 129, 0.06),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.20),
+    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.04) !important;
 }
 
 .glass-nav-sidebar {
-  background-color: rgba(255, 255, 255, 0.72);
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.50) 100%);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  background-color: rgba(255, 255, 255, 0.62);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.15) 100%);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow:
     0 16px 36px -10px rgba(0, 0, 0, 0.06),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.40);
+    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.35);
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
-  isolation: isolate;
-  contain: layout;
 }
 
 .dark .glass-nav-sidebar {
-  background-color: rgba(2, 6, 15, 0.85) !important;
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.00) 100%) !important;
-  backdrop-filter: blur(20px) saturate(150%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background-color: rgba(9, 13, 22, 0.62) !important;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.01) 100%) !important;
+  backdrop-filter: blur(24px) saturate(190%) contrast(105%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(190%) contrast(105%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.22) !important;
   box-shadow:
-    0 20px 48px -12px rgba(0, 0, 0, 0.85),
-    0 0 20px -4px rgba(16, 185, 129, 0.04),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.10) !important;
+    0 20px 48px -12px rgba(0, 0, 0, 0.70),
+    0 0 20px -4px rgba(16, 185, 129, 0.06),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.20),
+    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.04) !important;
 }
 
 .glass-nav-sidebar-floating {
   box-shadow:
-    0 24px 48px -10px rgba(0, 0, 0, 0.14),
-    0 0 0 1px rgba(0, 0, 0, 0.06),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.95);
+    0 24px 50px -10px rgba(0, 0, 0, 0.12),
+    0 0 0 1px rgba(0, 0, 0, 0.07),
+    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.98);
 }
 
 .dark .glass-nav-sidebar-floating {
   box-shadow:
-    0 28px 60px -12px rgba(0, 0, 0, 0.92),
-    0 0 0 1px rgba(255, 255, 255, 0.10),
-    0 0 24px -4px rgba(16, 185, 129, 0.08),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.14) !important;
+    0 30px 65px -12px rgba(0, 0, 0, 0.90),
+    0 0 0 1px rgba(255, 255, 255, 0.16),
+    0 0 24px -4px rgba(16, 185, 129, 0.10),
+    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.24) !important;
 }
 
 .glass-nav-item {

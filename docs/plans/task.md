@@ -877,3 +877,4 @@
 | task-887 | Frontend: Integração na tela de Negociações (pipeline/page.tsx) e Conversão em Venda | completed | Conectado listener usePipelineSync e emissão de notifyPipelineUpdated no drop e conversão |
 | task-888 | Validação completa (testes automatizados Vitest, lint/build Next.js/NestJS), commit e push | completed | Testes Vitest 100% aprovados, build NestJS e build Next.js (87 rotas) validados e commit enviado |
 | task-889 | Frontend: Fixar barra de ferramentas do editor no topo e isolar canvas de rolagem em /configuracoes/documentos | completed | Unificado editor em container integrado com toolbar fixa no topo e canvas com rolagem interna suave, impedindo sobreposi��o no contrato |
+| task-890 | Estilo: Restaurar e aprimorar efeito Glassmorphism transl�cido na Topbar e Sidebar (tema claro e escuro) | completed | Calibrada opacidade para 62-65%, blur de 20-24px com satura��o 180-190%, borda chanfrada e reflexos superiores em globals.css |
