@@ -103,6 +103,19 @@ const SALE_STATUS_OPTIONS = [
   { value: "CANCELLED", label: "Cancelada" },
 ];
 
+const PAYMENT_METHOD_OPTIONS = [
+  "À Vista (PIX / Transferência)",
+  "Financiamento Bancário",
+  "Boleto Bancário",
+  "Cartão de Crédito (1x à vista)",
+  "Cartão de Crédito em 6x",
+  "Cartão de Crédito em 10x",
+  "Cartão de Crédito em 12x",
+  "Cartão de Crédito em 18x",
+  "Cartão de Crédito em 21x",
+  "Cartão de Crédito em 24x",
+];
+
 function parseUserAgentFriendly(ua?: string | null): string {
   if (!ua || typeof ua !== "string") return "Navegador Web";
   let os = "Dispositivo";
@@ -205,6 +218,7 @@ export default function VendaDetailPage(): JSX.Element {
 
   const [searchingCep, setSearchingCep] = useState(false);
   const [isCustomUtility, setIsCustomUtility] = useState(false);
+  const [isCustomPayment, setIsCustomPayment] = useState(false);
 
   const addressNumberRef = useRef<HTMLInputElement>(null);
 
@@ -227,7 +241,7 @@ export default function VendaDetailPage(): JSX.Element {
     city: "",
     state: "",
     zipCode: "",
-    utilityCompany: "CEMIG",
+    utilityCompany: "",
     ucNumber: "",
     systemPowerKwp: "",
     totalValue: "",
@@ -255,7 +269,11 @@ export default function VendaDetailPage(): JSX.Element {
           data.customerCpfCnpj || data.documentNumber || data.proposal?.deal?.lead?.cpfCnpj || "",
         customerRgIe: data.customerRgIe || data.rgNumber || "",
         legalRepresentativeName: data.legalRepresentativeName || "",
-        legalRepresentativeCpf: data.legalRepresentativeCpf || "",
+        legalRepresentativeCpf:
+          data.legalRepresentativeCpf &&
+          data.legalRepresentativeCpf.replace(/\D/g, "").length === 11
+            ? formatCpf(data.legalRepresentativeCpf)
+            : "",
         maritalStatus: data.maritalStatus || "Casado(a)",
         profession: data.profession || "",
         addressStreet: data.addressStreet || data.installationAddress || "",
@@ -265,7 +283,7 @@ export default function VendaDetailPage(): JSX.Element {
         city: data.city || data.installationCity || "",
         state: data.state || data.installationState || "",
         zipCode: data.zipCode || data.installationZip || "",
-        utilityCompany: data.utilityCompany || data.distributionCompany || "CEMIG",
+        utilityCompany: data.utilityCompany || data.distributionCompany || "",
         ucNumber: data.ucNumber || data.consumerUnitNumber || "",
         systemPowerKwp: data.systemPowerKwp != null ? String(data.systemPowerKwp) : "",
         totalValue: (() => {
@@ -317,7 +335,7 @@ export default function VendaDetailPage(): JSX.Element {
         customerPhone: data.telefone || prev.customerPhone,
         customerEmail: data.email || prev.customerEmail,
         legalRepresentativeName: data.representanteLegal || prev.legalRepresentativeName,
-        legalRepresentativeCpf: data.cpfRepresentante || prev.legalRepresentativeCpf,
+        legalRepresentativeCpf: prev.legalRepresentativeCpf,
         zipCode: data.cep || prev.zipCode,
         addressStreet: data.logradouro || prev.addressStreet,
         addressNumber: data.numero || prev.addressNumber,
@@ -330,7 +348,7 @@ export default function VendaDetailPage(): JSX.Element {
       setCnpjFeedback({
         type: "success",
         message:
-          "Dados da empresa e endereço preenchidos via Receita Federal! Você pode ajustar qualquer campo manualmente.",
+          "Dados da empresa e endereço preenchidos via Receita Federal! O CPF do representante legal deve ser informado manualmente.",
       });
       setTimeout(() => setCnpjFeedback(null), 8000);
     } catch (err: any) {
@@ -1088,6 +1106,9 @@ export default function VendaDetailPage(): JSX.Element {
                       )}
                     >
                       CPF do Representante Legal
+                      <span className="ml-1 text-[10px] font-normal text-[var(--color-muted-foreground)] opacity-80">
+                        (Preenchimento manual)
+                      </span>
                       {fieldErrors.legalRepresentativeCpf && (
                         <span className="ml-1 font-bold text-rose-500">*</span>
                       )}
@@ -1497,42 +1518,19 @@ export default function VendaDetailPage(): JSX.Element {
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div>
-                <div className="flex items-center justify-between">
-                  <label
-                    className={cn(
-                      "text-xs font-medium",
-                      fieldErrors.utilityCompany
-                        ? "font-semibold text-rose-600 dark:text-rose-400"
-                        : "text-[var(--color-muted-foreground)]"
-                    )}
-                  >
-                    Concessionária de Energia
-                    {fieldErrors.utilityCompany && (
-                      <span className="ml-1 font-bold text-rose-500">*</span>
-                    )}
-                  </label>
-                  {isCustomUtility ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsCustomUtility(false);
-                        setFormData((prev) => ({ ...prev, utilityCompany: "CEMIG" }));
-                        clearFieldError("utilityCompany");
-                      }}
-                      className="text-[10px] font-medium text-[var(--color-primary)] hover:underline"
-                    >
-                      Escolher da lista
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setIsCustomUtility(true)}
-                      className="text-[10px] font-medium text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)]"
-                    >
-                      + Digitar outra
-                    </button>
+                <label
+                  className={cn(
+                    "text-xs font-medium",
+                    fieldErrors.utilityCompany
+                      ? "font-semibold text-rose-600 dark:text-rose-400"
+                      : "text-[var(--color-muted-foreground)]"
                   )}
-                </div>
+                >
+                  Concessionária de Energia
+                  {fieldErrors.utilityCompany && (
+                    <span className="ml-1 font-bold text-rose-500">*</span>
+                  )}
+                </label>
 
                 {!isCustomUtility ? (
                   <select
@@ -1558,7 +1556,7 @@ export default function VendaDetailPage(): JSX.Element {
                       }
                     }}
                     className={cn(
-                      "mt-1 w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                      "mt-1 h-[38px] w-full rounded-lg border bg-[var(--color-background)] px-3 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
                       fieldErrors.utilityCompany
                         ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
                         : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
@@ -1579,23 +1577,35 @@ export default function VendaDetailPage(): JSX.Element {
                     <option value="__CUSTOM__">+ Outra concessionária (Digitar nome)...</option>
                   </select>
                 ) : (
-                  <input
-                    id="field-utilityCompany"
-                    type="text"
-                    value={formData.utilityCompany}
-                    onChange={(e) => {
-                      setFormData((prev) => ({ ...prev, utilityCompany: e.target.value }));
-                      clearFieldError("utilityCompany");
-                    }}
-                    placeholder="Digite o nome da concessionária"
-                    autoFocus
-                    className={cn(
-                      "mt-1 w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
-                      fieldErrors.utilityCompany
-                        ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
-                        : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
-                    )}
-                  />
+                  <div className="relative mt-1">
+                    <input
+                      id="field-utilityCompany"
+                      type="text"
+                      value={formData.utilityCompany}
+                      onChange={(e) => {
+                        setFormData((prev) => ({ ...prev, utilityCompany: e.target.value }));
+                        clearFieldError("utilityCompany");
+                      }}
+                      placeholder="Digite o nome da concessionária"
+                      autoFocus
+                      className={cn(
+                        "h-[38px] w-full rounded-lg border bg-[var(--color-background)] pl-3 pr-20 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                        fieldErrors.utilityCompany
+                          ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
+                          : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
+                      )}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomUtility(false);
+                        clearFieldError("utilityCompany");
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-medium text-[var(--color-primary)] hover:underline"
+                    >
+                      Ver lista
+                    </button>
+                  </div>
                 )}
                 {fieldErrors.utilityCompany && (
                   <p className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
@@ -1626,7 +1636,7 @@ export default function VendaDetailPage(): JSX.Element {
                   }}
                   placeholder="Ex: 3001234567"
                   className={cn(
-                    "mt-1 w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                    "mt-1 h-[38px] w-full rounded-lg border bg-[var(--color-background)] px-3 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
                     fieldErrors.ucNumber
                       ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
                       : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
@@ -1664,7 +1674,7 @@ export default function VendaDetailPage(): JSX.Element {
                   }}
                   placeholder="Ex: 6.80"
                   className={cn(
-                    "mt-1 w-full rounded-lg border bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
+                    "mt-1 h-[38px] w-full rounded-lg border bg-[var(--color-background)] px-3 text-xs text-[var(--color-foreground)] transition-colors focus:outline-none",
                     fieldErrors.systemPowerKwp
                       ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
                       : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
@@ -1714,7 +1724,7 @@ export default function VendaDetailPage(): JSX.Element {
                     }}
                     placeholder="0,00"
                     className={cn(
-                      "w-full rounded-lg border bg-[var(--color-background)] pl-9 pr-3 py-2 text-xs font-semibold text-[var(--color-foreground)] transition-colors focus:outline-none",
+                      "h-[38px] w-full rounded-lg border bg-[var(--color-background)] pl-9 pr-3 text-xs font-semibold text-[var(--color-foreground)] transition-colors focus:outline-none",
                       fieldErrors.totalValue
                         ? "border-rose-500 bg-rose-50/15 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 dark:bg-rose-950/20"
                         : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
@@ -1732,67 +1742,66 @@ export default function VendaDetailPage(): JSX.Element {
                 <label className="text-xs font-medium text-[var(--color-muted-foreground)]">
                   Condição / Forma de Pagamento
                 </label>
-                <input
-                  type="text"
-                  value={formData.paymentMethod}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, paymentMethod: e.target.value }))
-                  }
-                  placeholder="Ex: À Vista, Financiamento Bancário, Cartão de Crédito..."
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
-                />
-
-                <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  <span className="text-[10px] font-medium text-[var(--color-muted-foreground)]">
-                    Opções rápidas:
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        paymentMethod: "À Vista (PIX / Transferência)",
-                      }))
+                {!isCustomPayment ? (
+                  <select
+                    id="field-paymentMethod"
+                    value={
+                      PAYMENT_METHOD_OPTIONS.includes(formData.paymentMethod)
+                        ? formData.paymentMethod
+                        : formData.paymentMethod
+                          ? formData.paymentMethod
+                          : "Financiamento Bancário"
                     }
-                    className="rounded-md border border-[var(--color-border)] bg-[var(--color-muted)]/50 px-2 py-0.5 text-[10px] font-medium text-[var(--color-foreground)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] transition-colors"
+                    onChange={(e) => {
+                      if (e.target.value === "__CUSTOM__") {
+                        setIsCustomPayment(true);
+                      } else {
+                        setFormData((prev) => ({ ...prev, paymentMethod: e.target.value }));
+                      }
+                    }}
+                    className="mt-1 h-[38px] w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 text-xs text-[var(--color-foreground)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
                   >
-                    À Vista
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        paymentMethod: "Financiamento Bancário",
-                      }))
-                    }
-                    className="rounded-md border border-[var(--color-border)] bg-[var(--color-muted)]/50 px-2 py-0.5 text-[10px] font-medium text-[var(--color-foreground)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] transition-colors"
-                  >
-                    Financiamento
-                  </button>
-
-                  <span className="text-[10px] text-[var(--color-muted-foreground)] ml-1">
-                    Cartão:
-                  </span>
-                  {[
-                    { label: "1x", text: "Cartão de Crédito (1x à vista)" },
-                    { label: "6x", text: "Cartão de Crédito em 6x" },
-                    { label: "10x", text: "Cartão de Crédito em 10x" },
-                    { label: "12x", text: "Cartão de Crédito em 12x" },
-                    { label: "18x", text: "Cartão de Crédito em 18x" },
-                    { label: "21x", text: "Cartão de Crédito em 21x" },
-                    { label: "24x", text: "Cartão de Crédito em 24x" },
-                  ].map((c) => (
+                    {formData.paymentMethod &&
+                      !PAYMENT_METHOD_OPTIONS.includes(formData.paymentMethod) && (
+                        <option value={formData.paymentMethod}>{formData.paymentMethod}</option>
+                      )}
+                    {PAYMENT_METHOD_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                    <option value="__CUSTOM__">+ Outra condição (Digitar manualmente)...</option>
+                  </select>
+                ) : (
+                  <div className="relative mt-1">
+                    <input
+                      id="field-paymentMethod"
+                      type="text"
+                      autoFocus
+                      value={formData.paymentMethod}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, paymentMethod: e.target.value }))
+                      }
+                      placeholder="Ex: 50% entrada + 50% na entrega"
+                      className="h-[38px] w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] pl-3 pr-20 text-xs text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none"
+                    />
                     <button
-                      key={c.label}
                       type="button"
-                      onClick={() => setFormData((prev) => ({ ...prev, paymentMethod: c.text }))}
-                      className="rounded-md border border-[var(--color-border)] bg-[var(--color-muted)]/50 px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-foreground)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] transition-colors"
+                      onClick={() => {
+                        setIsCustomPayment(false);
+                        if (!formData.paymentMethod) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            paymentMethod: "Financiamento Bancário",
+                          }));
+                        }
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-medium text-[var(--color-primary)] hover:underline"
                     >
-                      {c.label}
+                      Ver lista
                     </button>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

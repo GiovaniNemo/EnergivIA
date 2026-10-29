@@ -103,7 +103,8 @@ REGRAS DE LEITURA E PARSING CRÍTICAS (QUANDO A IMAGEM ESTIVER LEGÍVEL):
    - confianca: "ALTA" | "MEDIA" | "BAIXA".
    - motivo_recusa: Explicação clara se legivel for false ou se os dados essenciais estiverem ausentes/ilegíveis.
    - dados_fundamentais_identificados: true se consumo e localização/distribuidora foram identificados com certeza.
-   - distribuidora: Nome da concessionária identificada no cabeçalho ou logotipo.
+   - distribuidora: Nome da concessionária de energia identificada no cabeçalho ou logotipo (ex: Copel, CPFL, Cemig, Enel, Equatorial, Energisa, Neoenergia, Light, EDP, RGE, Celesc, etc.).
+   - codigo_instalacao_ou_uc: Código do cliente, número da instalação, conta contrato ou número da Unidade Consumidora (UC) indicado na fatura (geralmente números entre 6 e 12 dígitos, ex: "3001234567").
    - cidade: Cidade da unidade consumidora indicada no endereço.
    - uf: Sigla do estado com 2 letras (ex: SP, PR, MG, RJ, BA, GO, etc.).
    - tipo_conexao: "Monofásico" | "Bifásico" | "Trifásico".

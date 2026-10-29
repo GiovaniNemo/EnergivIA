@@ -26,6 +26,8 @@ export type WhatsappBotStep =
 export interface WhatsappSessionData {
   cidade?: string;
   uf?: string;
+  distribuidora?: string;
+  ucNumber?: string;
   hsp?: number;
   consumptionKwh?: number;
   billValue?: number;

@@ -351,6 +351,8 @@ export interface PersistedSimulationInputDraft {
   investmentAmount: number;
   financingType: "CASH";
   energyPriceKwh: number;
+  distributor?: string;
+  consumerUnitNumber?: string;
   sizing: { monthlyConsumptionKwh: number; [key: string]: unknown };
   solarResource?: unknown;
 }
@@ -361,6 +363,11 @@ export function sizingBillHistoryFromExtracted(extracted: BillSizingSource | nul
   billConsumptionHistoryKwh?: number[];
   billConsumptionHistoryLabeled?: Array<{ month: string; consumptionKwh: number }>;
   billReferenceMonth?: string;
+  distributor?: string;
+  distribuidora?: string;
+  consumerUnitNumber?: string;
+  ucNumber?: string;
+  codigo_instalacao_ou_uc?: string;
 } {
   if (!extracted) return {};
   const ref = typeof extracted.referenceMonth === "string" ? extracted.referenceMonth.trim() : "";
@@ -373,8 +380,50 @@ export function sizingBillHistoryFromExtracted(extracted: BillSizingSource | nul
     billConsumptionHistoryKwh?: number[];
     billConsumptionHistoryLabeled?: Array<{ month: string; consumptionKwh: number }>;
     billReferenceMonth?: string;
+    distributor?: string;
+    distribuidora?: string;
+    consumerUnitNumber?: string;
+    ucNumber?: string;
+    codigo_instalacao_ou_uc?: string;
   } = {};
   if (ref) out.billReferenceMonth = ref;
+
+  const ext = extracted as unknown as Record<string, unknown>;
+  const dist =
+    typeof ext["distribuidora"] === "string" && (ext["distribuidora"] as string).trim()
+      ? (ext["distribuidora"] as string).trim()
+      : typeof ext["provider"] === "string" && (ext["provider"] as string).trim()
+        ? (ext["provider"] as string).trim()
+        : typeof raw?.["distribuidora"] === "string" && String(raw["distribuidora"]).trim()
+          ? String(raw["distribuidora"]).trim()
+          : typeof raw?.["provider"] === "string" && String(raw["provider"]).trim()
+            ? String(raw["provider"]).trim()
+            : "";
+  if (dist) {
+    out.distributor = dist;
+    out.distribuidora = dist;
+  }
+
+  const uc =
+    typeof ext["codigo_instalacao_ou_uc"] === "string" &&
+    String(ext["codigo_instalacao_ou_uc"]).trim()
+      ? String(ext["codigo_instalacao_ou_uc"]).trim()
+      : typeof ext["consumerUnitNumber"] === "string" && String(ext["consumerUnitNumber"]).trim()
+        ? String(ext["consumerUnitNumber"]).trim()
+        : typeof ext["ucNumber"] === "string" && String(ext["ucNumber"]).trim()
+          ? String(ext["ucNumber"]).trim()
+          : typeof raw?.["codigo_instalacao_ou_uc"] === "string" &&
+              String(raw["codigo_instalacao_ou_uc"]).trim()
+            ? String(raw["codigo_instalacao_ou_uc"]).trim()
+            : typeof raw?.["consumerUnitNumber"] === "string" &&
+                String(raw["consumerUnitNumber"]).trim()
+              ? String(raw["consumerUnitNumber"]).trim()
+              : "";
+  if (uc) {
+    out.consumerUnitNumber = uc;
+    out.ucNumber = uc;
+    out.codigo_instalacao_ou_uc = uc;
+  }
 
   const labeledRaw = raw?.["consumptionHistoryLabeled"];
   if (Array.isArray(labeledRaw) && labeledRaw.length > 0) {
@@ -422,11 +471,30 @@ export function quickResultToPersistedSimulationDraft(
     monthlyConsumptionKwh: monthlyKwh,
     ...(opts?.sizingExtras ?? {}),
   };
+  const extras = (opts?.sizingExtras ?? {}) as Record<string, unknown>;
+  const dist =
+    typeof extras["distributor"] === "string"
+      ? (extras["distributor"] as string)
+      : typeof extras["distribuidora"] === "string"
+        ? (extras["distribuidora"] as string)
+        : undefined;
+
+  const uc =
+    typeof extras["consumerUnitNumber"] === "string"
+      ? (extras["consumerUnitNumber"] as string)
+      : typeof extras["ucNumber"] === "string"
+        ? (extras["ucNumber"] as string)
+        : typeof extras["codigo_instalacao_ou_uc"] === "string"
+          ? (extras["codigo_instalacao_ou_uc"] as string)
+          : undefined;
+
   return {
     systemSizeKw: Math.max(0.5, quick.tamanhoSistema),
     investmentAmount: Math.max(1000, Math.round(quick.valorSistema)),
     financingType: "CASH",
     energyPriceKwh: energyPrice,
+    ...(dist ? { distributor: dist } : {}),
+    ...(uc ? { consumerUnitNumber: uc } : {}),
     sizing,
     ...(opts?.solarResource != null ? { solarResource: opts.solarResource } : {}),
   };

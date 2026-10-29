@@ -3231,6 +3231,8 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
                   totalSumKwh: extractionResult.totalSumKwh,
                   cidade: extractionResult.data.cidade,
                   uf: extractionResult.data.uf,
+                  distribuidora: extractionResult.data.distribuidora,
+                  codigo_instalacao_ou_uc: extractionResult.data.codigo_instalacao_ou_uc,
                   isValidForSizing: true,
                 }
               : extractionResult
@@ -5582,6 +5584,8 @@ ${catalogContext}`;
       modPowerWUser?: number;
       cidade?: string;
       estado?: string;
+      distribuidora?: string;
+      ucNumber?: string;
       hsp?: number;
       pendingCityCandidates?: MunicipalityCandidate[];
       pendingCityName?: string;
@@ -5608,6 +5612,8 @@ ${catalogContext}`;
       let modPowerWUser: number | undefined;
       let cidade: string | undefined = undefined;
       let estado: string | undefined = undefined;
+      let distribuidora: string | undefined = undefined;
+      let ucNumber: string | undefined = undefined;
       let hsp: number | undefined = undefined;
       let pendingCityCandidates: MunicipalityCandidate[] | undefined = undefined;
       let pendingCityName: string | undefined = undefined;
@@ -5638,6 +5644,9 @@ ${catalogContext}`;
           if (meta["targetModules"]) targetModules = Number(meta["targetModules"]);
           if (meta["cidade"]) cidade = String(meta["cidade"]);
           if (meta["uf"]) estado = String(meta["uf"]);
+          if (meta["distribuidora"]) distribuidora = String(meta["distribuidora"]);
+          if (meta["codigo_instalacao_ou_uc"]) ucNumber = String(meta["codigo_instalacao_ou_uc"]);
+          if (meta["ucNumber"]) ucNumber = String(meta["ucNumber"]);
           if (meta["gridVoltage"]) gridVoltage = String(meta["gridVoltage"]);
           if (meta["roofType"]) roofType = String(meta["roofType"]);
           if (meta["customRatePerKwp"]) customRatePerKwp = Number(meta["customRatePerKwp"]);
@@ -6191,6 +6200,8 @@ ${catalogContext}`;
         modPowerWUser,
         cidade,
         estado,
+        distribuidora,
+        ucNumber,
         hsp,
         pendingCityCandidates,
         pendingCityName,
@@ -6268,12 +6279,17 @@ ${catalogContext}`;
     const rawHasBms = storedSessionData.hasBms ?? (convMeta["hasBms"] as any);
     const rawHasBattery = storedSessionData.hasBattery ?? (convMeta["hasBattery"] as any);
     const rawBillValue = storedSessionData.billValue ?? (convMeta["billValue"] as any);
+    const rawDistribuidora = storedSessionData.distribuidora || convMeta["distribuidora"];
+    const rawUcNumber = storedSessionData.ucNumber || convMeta["ucNumber"];
 
     // CRUCIAL: Se a conversa estiver ociosa (menu inicial), com proposta concluída, ou se enviou uma nova fatura,
     // NUNCA hidrata dados de localização (cidade/UF), padrão de rede, telhado ou potência de cotações antigas!
     if (!isAtMenuOrCompleted && !isNewBillSubmission) {
       if (rawCidade && !sessionCtx.cidade) sessionCtx.cidade = rawCidade;
       if (rawUf && !sessionCtx.estado) sessionCtx.estado = rawUf;
+      if (rawDistribuidora && !sessionCtx.distribuidora)
+        sessionCtx.distribuidora = rawDistribuidora;
+      if (rawUcNumber && !sessionCtx.ucNumber) sessionCtx.ucNumber = rawUcNumber;
       if (rawBillValue !== undefined && sessionCtx.billValue === undefined)
         sessionCtx.billValue = rawBillValue;
       if (
@@ -6379,6 +6395,12 @@ ${catalogContext}`;
       if (extractionResult.data.valor_total_fatura_reais && sessionCtx.billValue === undefined) {
         sessionCtx.billValue = extractionResult.data.valor_total_fatura_reais;
       }
+      if (extractionResult.data.distribuidora && !sessionCtx.distribuidora) {
+        sessionCtx.distribuidora = extractionResult.data.distribuidora;
+      }
+      if (extractionResult.data.codigo_instalacao_ou_uc && !sessionCtx.ucNumber) {
+        sessionCtx.ucNumber = extractionResult.data.codigo_instalacao_ou_uc;
+      }
     }
 
     // Helper determinístico para atualizar estado e dados acumulados
@@ -6388,6 +6410,8 @@ ${catalogContext}`;
         ...storedSessionData,
         cidade: sessionCtx.cidade,
         uf: sessionCtx.estado,
+        distribuidora: sessionCtx.distribuidora,
+        ucNumber: sessionCtx.ucNumber,
         consumptionKwh: sessionCtx.consumptionKwh,
         billValue: sessionCtx.billValue,
         kwp: sessionCtx.targetKWp,
@@ -6412,6 +6436,9 @@ ${catalogContext}`;
       if (patchData) {
         if (patchData.cidade !== undefined) sessionCtx.cidade = patchData.cidade;
         if (patchData.uf !== undefined) sessionCtx.estado = patchData.uf;
+        if (patchData.distribuidora !== undefined)
+          sessionCtx.distribuidora = patchData.distribuidora;
+        if (patchData.ucNumber !== undefined) sessionCtx.ucNumber = patchData.ucNumber;
         if (patchData.consumptionKwh !== undefined)
           sessionCtx.consumptionKwh = patchData.consumptionKwh;
         if (patchData.billValue !== undefined) sessionCtx.billValue = patchData.billValue;
@@ -7921,12 +7948,19 @@ ${catalogContext}`;
               energyPriceKwh: effectiveTariff,
               billValue: calculatedBillValue,
               monthlyConsumptionKwh: effectiveConsumption,
+              distributor: sessionCtx.distribuidora || undefined,
+              consumerUnitNumber: sessionCtx.ucNumber || undefined,
               sizing: {
                 monthlyConsumptionKwh: effectiveConsumption,
                 energyPriceKwh: effectiveTariff,
                 billValue: calculatedBillValue,
                 cidade: sessionCtx.cidade || "São Paulo",
                 estado: sessionCtx.estado || "SP",
+                distributor: sessionCtx.distribuidora || undefined,
+                distribuidora: sessionCtx.distribuidora || undefined,
+                consumerUnitNumber: sessionCtx.ucNumber || undefined,
+                ucNumber: sessionCtx.ucNumber || undefined,
+                codigo_instalacao_ou_uc: sessionCtx.ucNumber || undefined,
                 recommendedPowerKw: selectedQuote.kwp,
                 estimatedGeneration: selectedQuote.estimatedGeneration,
               },
@@ -8105,6 +8139,8 @@ ${catalogContext}`;
                   chosenTemplate?.name ||
                   defaultTemplate?.name ||
                   "Modelo Comercial Padrão",
+                distributorCompany: sessionCtx.distribuidora || undefined,
+                consumerUnitNumber: sessionCtx.ucNumber || undefined,
               },
             } as any,
           },

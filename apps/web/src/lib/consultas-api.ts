@@ -109,9 +109,9 @@ export async function fetchCnpjData(rawCnpj: string): Promise<CnpjDataResult> {
         cidade: data.municipio || "",
         estado: data.uf || "",
         representanteLegal: adminSocio?.nome_socio || adminSocio?.nome || "",
-        cpfRepresentante: adminSocio?.cnpj_cpf_do_socio
-          ? formatCpf(adminSocio.cnpj_cpf_do_socio)
-          : "",
+        // Dados de CPF de sócios na Receita Federal são mascarados (***123456**) por sigilo fiscal.
+        // Mantido vazio para preenchimento manual estrito pelo usuário.
+        cpfRepresentante: "",
       };
     }
   } catch {}
@@ -154,9 +154,8 @@ export async function fetchCnpjData(rawCnpj: string): Promise<CnpjDataResult> {
         cidade: data.municipio || "",
         estado: data.uf || "",
         representanteLegal: adminSocio?.nome_socio || adminSocio?.nome || "",
-        cpfRepresentante: adminSocio?.cnpj_cpf_do_socio
-          ? formatCpf(adminSocio.cnpj_cpf_do_socio)
-          : "",
+        // Dados de CPF de sócios na Receita Federal são mascarados por sigilo fiscal.
+        cpfRepresentante: "",
       };
     }
   } catch {}

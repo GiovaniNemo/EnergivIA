@@ -59,7 +59,15 @@ export class SalesService {
         sale: true,
         deal: {
           include: {
-            lead: true,
+            lead: {
+              include: {
+                energyBills: {
+                  where: { extractionStatus: "COMPLETED", deletedAt: null },
+                  orderBy: { createdAt: "desc" },
+                  take: 1,
+                },
+              },
+            },
           },
         },
         simulation: true,
@@ -118,6 +126,70 @@ export class SalesService {
       (proposal.deal as unknown as { assignedUser?: { name?: string } })?.assignedUser?.name ||
       "Consultor EnergivIA";
 
+    const latestBill = (
+      proposal.deal?.lead as unknown as { energyBills?: Array<{ extractedData?: unknown }> }
+    )?.energyBills?.[0];
+    const extBill = (latestBill?.extractedData as Record<string, unknown> | null) ?? null;
+    const rawExtBill = (extBill?.["rawData"] as Record<string, unknown> | null) ?? null;
+    const billDist =
+      (extBill?.["distribuidora"] as string) ||
+      (extBill?.["provider"] as string) ||
+      (rawExtBill?.["distribuidora"] as string) ||
+      (rawExtBill?.["provider"] as string) ||
+      null;
+    const billUc =
+      (extBill?.["codigo_instalacao_ou_uc"] as string) ||
+      (extBill?.["consumerUnitNumber"] as string) ||
+      (extBill?.["ucNumber"] as string) ||
+      (rawExtBill?.["codigo_instalacao_ou_uc"] as string) ||
+      (rawExtBill?.["consumerUnitNumber"] as string) ||
+      (rawExtBill?.["ucNumber"] as string) ||
+      null;
+
+    const distributionCompany =
+      (typeof simInput["distributor"] === "string" && simInput["distributor"].trim()
+        ? simInput["distributor"].trim()
+        : null) ||
+      (typeof simInput["distributionCompany"] === "string" && simInput["distributionCompany"].trim()
+        ? simInput["distributionCompany"].trim()
+        : null) ||
+      (typeof sizing["distributor"] === "string" && sizing["distributor"].trim()
+        ? sizing["distributor"].trim()
+        : null) ||
+      (typeof sizing["distribuidora"] === "string" && sizing["distribuidora"].trim()
+        ? sizing["distribuidora"].trim()
+        : null) ||
+      (typeof rawIntegrator?.["distributorCompany"] === "string" &&
+      (rawIntegrator["distributorCompany"] as string).trim()
+        ? (rawIntegrator["distributorCompany"] as string).trim()
+        : null) ||
+      billDist ||
+      null;
+
+    const consumerUnitNumber =
+      (typeof simInput["consumerUnitNumber"] === "string" && simInput["consumerUnitNumber"].trim()
+        ? simInput["consumerUnitNumber"].trim()
+        : null) ||
+      (typeof simInput["ucNumber"] === "string" && simInput["ucNumber"].trim()
+        ? simInput["ucNumber"].trim()
+        : null) ||
+      (typeof sizing["consumerUnitNumber"] === "string" && sizing["consumerUnitNumber"].trim()
+        ? sizing["consumerUnitNumber"].trim()
+        : null) ||
+      (typeof sizing["ucNumber"] === "string" && sizing["ucNumber"].trim()
+        ? sizing["ucNumber"].trim()
+        : null) ||
+      (typeof sizing["codigo_instalacao_ou_uc"] === "string" &&
+      sizing["codigo_instalacao_ou_uc"].trim()
+        ? sizing["codigo_instalacao_ou_uc"].trim()
+        : null) ||
+      (typeof rawIntegrator?.["consumerUnitNumber"] === "string" &&
+      (rawIntegrator["consumerUnitNumber"] as string).trim()
+        ? (rawIntegrator["consumerUnitNumber"] as string).trim()
+        : null) ||
+      billUc ||
+      null;
+
     const sale = await this.prisma.sale.create({
       data: {
         tenantId,
@@ -132,8 +204,8 @@ export class SalesService {
         installationCity: typeof simInput["city"] === "string" ? simInput["city"] : null,
         installationState: typeof simInput["state"] === "string" ? simInput["state"] : null,
         installationZip: typeof simInput["zipCode"] === "string" ? simInput["zipCode"] : null,
-        distributionCompany:
-          typeof simInput["distributor"] === "string" ? simInput["distributor"] : null,
+        distributionCompany,
+        consumerUnitNumber,
         systemPowerKwp,
         investmentAmount,
         sellerName,
@@ -297,7 +369,15 @@ export class SalesService {
           include: {
             deal: {
               include: {
-                lead: true,
+                lead: {
+                  include: {
+                    energyBills: {
+                      where: { extractionStatus: "COMPLETED", deletedAt: null },
+                      orderBy: { createdAt: "desc" },
+                      take: 1,
+                    },
+                  },
+                },
               },
             },
             simulation: true,
@@ -349,6 +429,29 @@ export class SalesService {
       sale.investmentAmount ??
       0;
 
+    const simInput = (sale.proposal?.simulation?.input as Record<string, unknown>) ?? {};
+    const simResult = (sale.proposal?.simulation?.result as Record<string, unknown>) ?? {};
+    const sizing = (simResult["sizing"] as Record<string, unknown>) ?? {};
+    const latestBill = (
+      sale.proposal?.deal?.lead as unknown as { energyBills?: Array<{ extractedData?: unknown }> }
+    )?.energyBills?.[0];
+    const extBill = (latestBill?.extractedData as Record<string, unknown> | null) ?? null;
+    const rawExtBill = (extBill?.["rawData"] as Record<string, unknown> | null) ?? null;
+    const billDist =
+      (extBill?.["distribuidora"] as string) ||
+      (extBill?.["provider"] as string) ||
+      (rawExtBill?.["distribuidora"] as string) ||
+      (rawExtBill?.["provider"] as string) ||
+      null;
+    const billUc =
+      (extBill?.["codigo_instalacao_ou_uc"] as string) ||
+      (extBill?.["consumerUnitNumber"] as string) ||
+      (extBill?.["ucNumber"] as string) ||
+      (rawExtBill?.["codigo_instalacao_ou_uc"] as string) ||
+      (rawExtBill?.["consumerUnitNumber"] as string) ||
+      (rawExtBill?.["ucNumber"] as string) ||
+      null;
+
     return {
       ...sale,
       customerName,
@@ -357,8 +460,51 @@ export class SalesService {
       customerCpfCnpj,
       city: sale.installationCity,
       state: sale.installationState,
-      utilityCompany: sale.distributionCompany,
-      ucNumber: sale.consumerUnitNumber,
+      utilityCompany:
+        sale.distributionCompany ||
+        (typeof simInput["distributor"] === "string" && simInput["distributor"].trim()
+          ? simInput["distributor"].trim()
+          : null) ||
+        (typeof simInput["distributionCompany"] === "string" &&
+        simInput["distributionCompany"].trim()
+          ? simInput["distributionCompany"].trim()
+          : null) ||
+        (typeof sizing["distributor"] === "string" && sizing["distributor"].trim()
+          ? sizing["distributor"].trim()
+          : null) ||
+        (typeof sizing["distribuidora"] === "string" && sizing["distribuidora"].trim()
+          ? sizing["distribuidora"].trim()
+          : null) ||
+        (typeof rawRenderedIntegrator?.["distributorCompany"] === "string" &&
+        (rawRenderedIntegrator["distributorCompany"] as string).trim()
+          ? (rawRenderedIntegrator["distributorCompany"] as string).trim()
+          : null) ||
+        billDist ||
+        null,
+      ucNumber:
+        sale.consumerUnitNumber ||
+        (typeof simInput["consumerUnitNumber"] === "string" && simInput["consumerUnitNumber"].trim()
+          ? simInput["consumerUnitNumber"].trim()
+          : null) ||
+        (typeof simInput["ucNumber"] === "string" && simInput["ucNumber"].trim()
+          ? simInput["ucNumber"].trim()
+          : null) ||
+        (typeof sizing["consumerUnitNumber"] === "string" && sizing["consumerUnitNumber"].trim()
+          ? sizing["consumerUnitNumber"].trim()
+          : null) ||
+        (typeof sizing["ucNumber"] === "string" && sizing["ucNumber"].trim()
+          ? sizing["ucNumber"].trim()
+          : null) ||
+        (typeof sizing["codigo_instalacao_ou_uc"] === "string" &&
+        sizing["codigo_instalacao_ou_uc"].trim()
+          ? sizing["codigo_instalacao_ou_uc"].trim()
+          : null) ||
+        (typeof rawRenderedIntegrator?.["consumerUnitNumber"] === "string" &&
+        (rawRenderedIntegrator["consumerUnitNumber"] as string).trim()
+          ? (rawRenderedIntegrator["consumerUnitNumber"] as string).trim()
+          : null) ||
+        billUc ||
+        null,
       totalValue,
       documents: sale.documents?.map((d) =>
         formatSaleDocument(d as unknown as Record<string, unknown>)
