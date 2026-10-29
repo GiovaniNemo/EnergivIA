@@ -876,3 +876,4 @@
 | task-886 | Frontend: Kanban Arrastável no Painel (DashboardKanban.tsx e dashboard/page.tsx) | completed | DndContext, Sortable e persistência via patchDeal implementados com atualização otimista |
 | task-887 | Frontend: Integração na tela de Negociações (pipeline/page.tsx) e Conversão em Venda | completed | Conectado listener usePipelineSync e emissão de notifyPipelineUpdated no drop e conversão |
 | task-888 | Validação completa (testes automatizados Vitest, lint/build Next.js/NestJS), commit e push | completed | Testes Vitest 100% aprovados, build NestJS e build Next.js (87 rotas) validados e commit enviado |
+| task-889 | Frontend: Fixar barra de ferramentas do editor no topo e isolar canvas de rolagem em /configuracoes/documentos | completed | Unificado editor em container integrado com toolbar fixa no topo e canvas com rolagem interna suave, impedindo sobreposi��o no contrato |
