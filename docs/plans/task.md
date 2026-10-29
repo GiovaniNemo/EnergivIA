@@ -907,7 +907,13 @@
 | task-918 | Brainstorming: Explorar contexto do rastreamento de afiliados, WhatsApp bot e cadastro | completed | Mapeado SalesRepModule, referralCode em User e Tenant, WhatsappGuestTrial e fluxo de cadastro |
 | task-919 | Brainstorming: Levantar requisitos e alinhar funcionamento do rastreamento WhatsApp -> Cadastro com o usuário | completed | Usuário escolheu abordagem Híbrida com 'Coleira Dupla' (link curto /w/:code + mensagem wa.me com tag) |
 | task-920 | Brainstorming: Propor abordagens técnicas de persistência e amarração (Banco vs Conversa vs Cookie) | completed | Usuário aprovou Abordagem 1 (Coleira Blindada com InboundLeadAttribution e cruzamento por telefone) |
-| task-921 | Brainstorming: Apresentar design detalhado da arquitetura da solução | in-progress | Apresentar modelo de dados, rotas de redirecionamento, webhook bot e amarração no cadastro |
-| task-921 | Brainstorming: Apresentar design detalhado em seções e validar | not-started | Detalhar modelo de dados, interceptação de webhook, cruzamento no cadastro e links dinâmicos |
-| task-922 | Brainstorming: Criar documento de design e commitar | not-started | Salvar em docs/plans/YYYY-MM-DD-rastreamento-parceiro-whatsapp-design.md |
-| task-923 | Transição: Invocar writing-plans para plano de execução | not-started | Estruturar plano executável passo a passo |
+| task-921 | Brainstorming: Apresentar design detalhado da arquitetura da solução | completed | Design apresentado e aprovado pelo usuário |
+| task-922 | Brainstorming: Criar documento de design e commitar | completed | Salvo em docs/plans/2026-10-29-rastreamento-parceiro-whatsapp-design.md e commitado |
+| task-923 | Transição: Invocar writing-plans para plano de execução | completed | Salvo em docs/plans/2026-10-29-rastreamento-parceiro-whatsapp-plan.md |
+| task-924 | Prisma Schema & DB: Adicionar modelo InboundLeadAttribution e relações | not-started | Modelo com phoneDigits, referralCode, salesRepId e relações em User e Tenant |
+| task-925 | Utilitário: Parser de tags de referral e normalizador de telefones | not-started | Testes e implementação de extractReferralCodeFromText e normalização |
+| task-926 | Backend WhatsApp: Interceptação no webhook, registro em InboundLeadAttribution e injeção de links com ref | not-started | Captura na mensagem inicial, gravação no banco e propagação de links com ref |
+| task-927 | Backend OrganizationsService: Cruzamento e amarração por telefone no cadastro de empresas | not-started | Fallback por telefone para atribuir salesRepId e referralCode automaticamente |
+| task-928 | Frontend Web: Rota /w/[code] de ponte rápida e gravação de cookie para o WhatsApp | not-started | Gravação imediata de cookie/storage e salto deep-link para wa.me com tag |
+| task-929 | Frontend Comercial: Exibição de Link do Bot e botão de compartilhar em grupos em SalesRepLinkCard | not-started | Abas/links duplos (Web e Bot) com texto pronto para grupos de integradores |
+| task-930 | Validação completa (testes automatizados Vitest, build API e Web), commit e push | not-started | Testes 100%, linters e builds validados |
