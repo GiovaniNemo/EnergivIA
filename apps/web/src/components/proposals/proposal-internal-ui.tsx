@@ -21,6 +21,7 @@ import {
   Calculator,
   Pencil,
   BadgeCheck,
+  CheckCircle2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,8 @@ export type ProposalInternalHeaderProps = {
   validUntilLabel: string;
   onSendToClient: () => void;
   onCloseProposal: () => void;
+  isClosedOrWon?: boolean;
+  closingProposal?: boolean;
   publicProposalPath: string;
   templateEditorUrl: string | null;
   canEditTemplate: boolean;
@@ -103,6 +106,8 @@ export function ProposalInternalHeader({
   validUntilLabel,
   onSendToClient,
   onCloseProposal,
+  isClosedOrWon = false,
+  closingProposal = false,
   publicProposalPath,
   templateEditorUrl: _templateEditorUrl,
   canEditTemplate: _canEditTemplate,
@@ -169,7 +174,14 @@ export function ProposalInternalHeader({
                   #{proposalNumber}
                 </span>
               ) : null}
-              <span className="inline-flex rounded-md border border-[var(--color-border)] bg-[var(--color-muted)]/30 px-2.5 py-0.5 text-xs font-semibold text-[var(--color-foreground)]">
+              <span
+                className={cn(
+                  "inline-flex rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors",
+                  statusLabel === "Aceita"
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                    : "border-[var(--color-border)] bg-[var(--color-muted)]/30 text-[var(--color-foreground)]"
+                )}
+              >
                 {statusLabel}
               </span>
               <span className="text-xs text-[var(--color-muted-foreground)]">
@@ -207,15 +219,40 @@ export function ProposalInternalHeader({
               <Send className="h-4 w-4 shrink-0" />
               Enviar proposta
             </Button>
-            <Button
-              type="button"
-              size="lg"
-              className="h-12 flex-1 gap-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-500 dark:hover:bg-emerald-950/50 text-sm font-semibold shadow-sm whitespace-nowrap"
-              variant="outline"
-              onClick={onCloseProposal}
-            >
-              Fechar proposta
-            </Button>
+            {isClosedOrWon ? (
+              <Button
+                type="button"
+                size="lg"
+                className="h-12 flex-1 gap-2 border-emerald-500/50 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-950/60 text-sm font-semibold shadow-xs whitespace-nowrap transition-all"
+                variant="outline"
+                onClick={onCloseProposal}
+                title="Proposta já fechada como Ganha (WON)"
+              >
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <span>Proposta fechada</span>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="lg"
+                disabled={closingProposal}
+                className="h-12 flex-1 gap-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-500 dark:hover:bg-emerald-950/50 text-sm font-semibold shadow-xs whitespace-nowrap transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                variant="outline"
+                onClick={onCloseProposal}
+              >
+                {closingProposal ? (
+                  <>
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin text-emerald-600 dark:text-emerald-400" />
+                    <span>Fechando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4 shrink-0" />
+                    <span>Fechar proposta</span>
+                  </>
+                )}
+              </Button>
+            )}
 
             <div className="relative shrink-0" ref={actionsRef}>
               <Button
@@ -325,28 +362,27 @@ export function ProposalInternalHeader({
           {pdfError ? <p className="text-xs text-red-600 dark:text-red-400">{pdfError}</p> : null}
 
           {/* Seleção do Layout no Topo (coluna direita, abaixo dos botões) */}
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-sm space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <label
-                htmlFor="top-proposal-layout-select"
-                className="text-xs font-semibold text-[var(--color-foreground)] flex items-center gap-1.5"
-              >
-                <LayoutTemplate className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                Layout da proposta
-              </label>
-              {templateSaving && (
-                <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                  <Loader2 className="h-3 w-3 animate-spin" /> Salvando...
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="min-w-0 flex-1">
-                <Select
+          <div className="group relative rounded-xl border border-[var(--color-border)]/80 bg-[var(--color-card)]/90 backdrop-blur-sm p-2 sm:px-3 sm:py-2.5 shadow-xs transition-all hover:border-emerald-500/40 hover:shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2.5">
+              <div className="flex items-center justify-between sm:justify-start gap-1.5 shrink-0 pl-0.5">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-foreground)]">
+                  <LayoutTemplate className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span className="tracking-tight">Modelo da proposta:</span>
+                </div>
+                {templateSaving && (
+                  <span className="flex sm:hidden items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Salvando...
+                  </span>
+                )}
+              </div>
+
+              <div className="relative min-w-0 flex-1">
+                <select
                   id="top-proposal-layout-select"
                   value={selectedTemplateId}
-                  onChange={(e) => onTemplateChange(e.target.value as string)}
+                  onChange={(e) => onTemplateChange(e.target.value)}
                   disabled={templateSaving}
+                  className="w-full h-9 appearance-none rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-background)]/80 pl-3 pr-8 text-xs font-medium text-[var(--color-foreground)] outline-none transition-all hover:border-emerald-500/40 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <option value="">Selecione um template publicado</option>
                   {templates.map((t) => (
@@ -354,24 +390,38 @@ export function ProposalInternalHeader({
                       {t.name} (v{t.version})
                     </option>
                   ))}
-                </Select>
+                </select>
+                <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted-foreground)]">
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </div>
               </div>
-              {previewLayoutHref ? (
-                <a
-                  href={previewLayoutHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="Pré-visualizar layout"
-                  className={cn(outlineSmLinkClass, "shrink-0 px-2.5")}
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Ver</span>
-                </a>
-              ) : null}
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                {templateSaving && (
+                  <span className="hidden sm:flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 px-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span>Salvando...</span>
+                  </span>
+                )}
+
+                {previewLayoutHref && (
+                  <a
+                    href={previewLayoutHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Visualizar modelo da proposta"
+                    className="inline-flex items-center gap-1.5 h-9 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-3 text-xs font-semibold transition-colors shrink-0"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    <span>Visualizar</span>
+                  </a>
+                )}
+              </div>
             </div>
-            {templateError ? (
-              <p className="text-xs text-red-600 dark:text-red-400">{templateError}</p>
-            ) : null}
+
+            {templateError && (
+              <p className="mt-1.5 text-xs text-red-600 dark:text-red-400 px-1">{templateError}</p>
+            )}
           </div>
         </div>
       </div>

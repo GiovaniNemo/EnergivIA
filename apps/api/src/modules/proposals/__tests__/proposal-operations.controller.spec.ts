@@ -11,6 +11,7 @@ describe("ProposalOperationsController - PDF & Thumbnail Endpoints", () => {
     mockProposalsService = {
       generatePdf: vi.fn().mockResolvedValue(Buffer.from("%PDF-1.4 test")),
       renderHtmlPdf: vi.fn().mockResolvedValue(Buffer.from("%PDF-1.4 html test")),
+      closeProposal: vi.fn().mockResolvedValue({ id: "prop-123", status: "ACCEPTED" }),
       renderThumbnail: vi
         .fn()
         .mockResolvedValue({ dataUrl: "data:image/jpeg;base64,mockThumbnail" }),
@@ -42,5 +43,11 @@ describe("ProposalOperationsController - PDF & Thumbnail Endpoints", () => {
       thumbPayload.selector
     );
     expect(result).toEqual({ dataUrl: "data:image/jpeg;base64,mockThumbnail" });
+  });
+
+  it("should delegate to closeProposal and return updated proposal", async () => {
+    const result = await controller.closeProposal("tenant-1", "prop-123");
+    expect(mockProposalsService.closeProposal).toHaveBeenCalledWith("tenant-1", "prop-123");
+    expect(result).toEqual({ id: "prop-123", status: "ACCEPTED" });
   });
 });

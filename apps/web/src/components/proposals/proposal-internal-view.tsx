@@ -2,7 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Copy, LinkIcon, AlertTriangle, CheckCircle2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Copy,
+  LinkIcon,
+  AlertTriangle,
+  CheckCircle2,
+  BadgeCheck,
+  Loader2,
+} from "lucide-react";
 import {
   getDefaultEssentialRulesForSeeding,
   PROJECT_COST_ESSENTIAL_LABOR_NAME,
@@ -17,6 +25,7 @@ import {
 import { createCostRule, listCostRules } from "@/lib/cost-rules-api";
 import {
   getProposal,
+  closeProposal,
   setProposalTemplate,
   updateProposalDiscount,
   updateProposalMarginOverride,
@@ -139,6 +148,8 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
   const [costDefaultsSaved, setCostDefaultsSaved] = useState(false);
   const [orgCostRulesExist, setOrgCostRulesExist] = useState(false);
   const [convertingToSale, setConvertingToSale] = useState(false);
+  const [closingProposal, setClosingProposal] = useState(false);
+  const [closeSuccessModalOpen, setCloseSuccessModalOpen] = useState(false);
   const [regeneratedPublicUrl, setRegeneratedPublicUrl] = useState<string | null>(null);
   const [actionToast, setActionToast] = useState<{
     type: "success" | "error";
@@ -372,13 +383,28 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
 
   async function handleCloseProposal(): Promise<void> {
     if (!currentOrganizationId || !proposal) return;
+
+    if (proposal.status === "ACCEPTED" || proposal.deal?.stage === "WON") {
+      setCloseSuccessModalOpen(true);
+      return;
+    }
+
+    setClosingProposal(true);
     try {
-      if (proposal.deal.stage !== "WON") {
-        await patchDeal(currentOrganizationId, proposal.deal.id, { stage: "WON" });
-      }
+      await closeProposal(currentOrganizationId, proposal.id);
+      notifyPipelineUpdated({
+        dealId: proposal.dealId ?? proposal.deal?.id,
+        leadId: proposal.deal?.lead?.id,
+        stage: "WON",
+        source: "proposal",
+      });
+      showToast("success", "Proposta fechada com sucesso! Negócio marcado como Ganho.");
       await reload();
+      setCloseSuccessModalOpen(true);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Erro ao fechar proposta");
+      showToast("error", e instanceof Error ? e.message : "Erro ao fechar proposta.");
+    } finally {
+      setClosingProposal(false);
     }
   }
 
@@ -716,6 +742,8 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
         validUntilLabel={new Date(proposal.validUntil).toLocaleDateString("pt-BR")}
         onSendToClient={() => void handleSendToClient()}
         onCloseProposal={() => void handleCloseProposal()}
+        isClosedOrWon={proposal.status === "ACCEPTED" || proposal.deal?.stage === "WON"}
+        closingProposal={closingProposal}
         publicProposalPath={publicProposalPath}
         templateEditorUrl={templateEditorPath}
         canEditTemplate={Boolean(templateIdForEditor) && isOwnerOrAdmin}
@@ -1139,6 +1167,77 @@ export function ProposalInternalView({ proposalId }: { proposalId: string }): JS
           {templateError ? (
             <p className="text-sm text-red-600 dark:text-red-400">{templateError}</p>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={closeSuccessModalOpen} onOpenChange={setCloseSuccessModalOpen}>
+        <DialogContent muiMaxWidth={false} className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 shrink-0">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-base font-bold text-[var(--color-foreground)]">
+                  Proposta Fechada com Sucesso
+                </DialogTitle>
+                <p className="text-xs text-[var(--color-muted-foreground)]">
+                  Negociação marcada como Ganha (WON) no funil
+                </p>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="py-2 text-xs leading-relaxed text-[var(--color-muted-foreground)] space-y-2">
+            <p>
+              A proposta do cliente{" "}
+              <strong className="text-[var(--color-foreground)]">
+                {proposal?.deal?.lead?.name}
+              </strong>{" "}
+              foi oficializada e o negócio está registrado como Ganho no funil.
+            </p>
+            <p>
+              Deseja avançar e converter diretamente em Venda para emitir o Contrato oficial e a
+              Procuração?
+            </p>
+          </div>
+
+          <div className="mt-4 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 pt-2 border-t border-[var(--color-border)]/60">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCloseSuccessModalOpen(false)}
+              className="text-xs"
+            >
+              Permanecer na Proposta
+            </Button>
+            <Button
+              type="button"
+              disabled={convertingToSale}
+              onClick={() => {
+                setCloseSuccessModalOpen(false);
+                void handleConvertToSale();
+              }}
+              className="gap-1.5 !bg-emerald-600 text-xs font-semibold !text-white hover:!bg-emerald-700 shadow-sm"
+              sx={{
+                bgcolor: "#059669 !important",
+                color: "#ffffff !important",
+                "&:hover": { bgcolor: "#047857 !important" },
+              }}
+            >
+              {convertingToSale ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Convertendo...
+                </>
+              ) : (
+                <>
+                  <BadgeCheck className="h-4 w-4" />
+                  Converter em Venda & Contratos
+                </>
+              )}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

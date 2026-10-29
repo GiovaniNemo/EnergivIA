@@ -62,6 +62,11 @@ export class ProposalOperationsController {
     return new StreamableFile(buffer);
   }
 
+  @Post(":id/close")
+  closeProposal(@TenantId() tenantId: string, @Param("id") id: string) {
+    return this.proposalsService.closeProposal(tenantId, id);
+  }
+
   @Post(":id/send")
   send(@TenantId() tenantId: string, @Param("id") id: string, @Body() body: { pdfUrl: string }) {
     return this.proposalsService.updatePdfUrl(tenantId, id, body.pdfUrl);

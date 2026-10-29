@@ -611,6 +611,64 @@ export class ProposalsService {
     return updated;
   }
 
+  async closeProposal(tenantId: string, id: string) {
+    const proposal = await this.prisma.proposal.findFirst({
+      where: { id, tenantId, ...soft },
+      include: {
+        deal: {
+          include: { lead: true },
+        },
+      },
+    });
+
+    if (!proposal) {
+      throw new NotFoundException("Proposta não encontrada.");
+    }
+
+    const now = new Date();
+    const updated = await this.prisma.proposal.update({
+      where: { id: proposal.id },
+      data: {
+        status: "ACCEPTED",
+        clientDecision: "ACCEPT",
+        clientDecisionAt: now,
+      },
+      include: {
+        deal: {
+          include: { lead: true },
+        },
+      },
+    });
+
+    if (proposal.dealId) {
+      try {
+        await this.prisma.deal.update({
+          where: { id: proposal.dealId },
+          data: {
+            stage: "WON",
+            temperature: "HOT",
+          },
+        });
+        await this.stockReservation.commitForDeal(tenantId, proposal.dealId);
+      } catch (err) {
+        Logger.warn(`Não foi possível atualizar deal para WON: ${err}`);
+      }
+    }
+
+    if (proposal.deal?.leadId) {
+      await this.leadActivityLog.append({
+        tenantId,
+        leadId: proposal.deal.leadId,
+        kind: "PROPOSAL_ACCEPTED",
+        label: `Proposta aceita e fechada (${proposal.title})`,
+        meta: { proposalId: id, dealId: proposal.dealId },
+        occurredAt: now,
+      });
+    }
+
+    return updated;
+  }
+
   async updateDiscount(
     tenantId: string,
     id: string,
