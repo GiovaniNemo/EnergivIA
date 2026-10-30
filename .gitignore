@@ -72,3 +72,8 @@ empreendimento-gd.csv.csv
 # Temporary datasheets folder
 temp-datasheets/
 
+
+# Motion film renders
+film/*.mp4
+film/look/
+film/stills/

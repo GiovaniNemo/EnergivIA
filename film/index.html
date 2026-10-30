@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>EnergivIA - Vídeo de Lançamento</title>
+<meta name="viewport" content="width=1920, height=1080">
+<link rel="stylesheet" href="./runtime/fonts.css">
+<style>
+:root {
+  --ground: #02040a;
+  --ground-card: rgba(10, 16, 28, 0.92);
+  --border-card: rgba(16, 185, 129, 0.35);
+  --ink: #ffffff;
+  --ink-soft: #94a3b8;
+  --accent: #10b981;
+  --accent-glow: rgba(16, 185, 129, 0.55);
+  --accent-cyan: #2dd4bf;
+  --font: "Inter", system-ui, -apple-system, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: #02040a; font-family: var(--font); color: var(--ink); -webkit-font-smoothing: antialiased; }
+
+#main {
+  position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+  overflow: hidden; background: var(--ground);
+}
+
+/* Background Atmosphere */
+.grid-bg {
+  position: absolute; inset: 0;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+}
+.radial-glow {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 50%, rgba(16, 185, 129, 0.2) 0%, rgba(2, 4, 10, 0.98) 75%);
+  pointer-events: none;
+}
+
+/* Persistent Vertical Laser Beam */
+#laserCore {
+  position: absolute; left: 960px; top: 0; bottom: 0; width: 4px;
+  background: #ffffff;
+  box-shadow: 0 0 14px #ffffff, 0 0 35px var(--accent), 0 0 70px var(--accent-glow);
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.scene { position: absolute; inset: 0; overflow: hidden; background: var(--ground); }
+.cam { position: absolute; inset: 0; }
+
+/* =========================================================================
+   SCENE 1: HOOK (0s - 3.5s | Frames 0 - 105)
+   ========================================================================= */
+#s1_wrap {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+#s1_headline {
+  font-size: 104px; line-height: 124px; font-weight: 800;
+  text-align: center; letter-spacing: -0.045em; max-width: 1450px;
+  text-shadow: 0 10px 40px rgba(0,0,0,0.9);
+}
+#s1_sub {
+  font-size: 42px; line-height: 56px; font-weight: 400; color: var(--ink-soft);
+  text-align: center; margin-top: 36px; letter-spacing: -0.02em;
+}
+
+/* =========================================================================
+   SCENE 2: SCAN & AI EXTRACTION (3.5s - 7.0s | Frames 105 - 210)
+   ========================================================================= */
+#s2_wrap {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+}
+#s2_billCard {
+  position: relative; width: 620px; height: 760px;
+  background: var(--ground-card);
+  border: 1px solid var(--border-card);
+  border-radius: 28px;
+  box-shadow: 0 25px 70px rgba(0,0,0,0.85), 0 0 45px rgba(16, 185, 129, 0.2);
+  padding: 44px;
+  backdrop-filter: blur(20px);
+  overflow: hidden;
+}
+.bill-header {
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px; margin-bottom: 28px;
+}
+.bill-title { font-size: 24px; font-weight: 700; color: #fff; letter-spacing: -0.02em; }
+.bill-badge {
+  padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: 700;
+  background: rgba(16, 185, 129, 0.2); color: var(--accent); border: 1px solid var(--border-card);
+}
+.bill-row {
+  display: flex; justify-content: space-between; margin-bottom: 18px; font-size: 20px;
+  color: var(--ink-soft);
+}
+.bill-row strong { color: #fff; font-weight: 600; }
+.bill-chart {
+  width: 100%; height: 150px; margin: 24px 0; border-radius: 16px;
+  background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.12);
+  display: flex; align-items: flex-end; gap: 14px; padding: 20px;
+}
+.chart-bar {
+  flex: 1; background: linear-gradient(to top, rgba(16,185,129,0.35), var(--accent));
+  border-radius: 6px;
+}
+#s2_laserScan {
+  position: absolute; left: 0; right: 0; top: 0; height: 5px;
+  background: #fff;
+  box-shadow: 0 0 15px #fff, 0 0 40px var(--accent);
+  pointer-events: none;
+}
+#s2_extracted {
+  position: absolute; right: 220px; top: 300px; display: flex; flex-direction: column; gap: 24px;
+}
+.extract-pill {
+  background: rgba(10, 20, 35, 0.95);
+  border: 1px solid var(--accent);
+  padding: 22px 34px; border-radius: 22px;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.7), 0 0 30px var(--accent-glow);
+  font-size: 32px; font-weight: 700; letter-spacing: -0.02em;
+  color: #fff; display: flex; align-items: center; gap: 16px;
+}
+.extract-pill span { color: var(--accent); }
+#s2_title {
+  position: absolute; left: 0; width: 1920px; top: 100px; text-align: center;
+  font-size: 68px; font-weight: 800; letter-spacing: -0.035em;
+}
+
+/* =========================================================================
+   SCENE 3: SIZING & SOLAR ENGINE (7.0s - 12.0s | Frames 210 - 360)
+   ========================================================================= */
+#s3_wrap {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+#s3_title {
+  font-size: 72px; font-weight: 800; letter-spacing: -0.04em; text-align: center;
+  margin-bottom: 56px;
+}
+#s3_specGrid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; width: 1400px;
+}
+.spec-card {
+  background: var(--ground-card);
+  border: 1px solid var(--border-card);
+  border-radius: 28px; padding: 44px 38px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+  position: relative; overflow: hidden;
+}
+.spec-card.highlight {
+  border-color: var(--accent);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.85), 0 0 40px var(--accent-glow);
+}
+.spec-label { font-size: 18px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.1em; }
+.spec-val { font-size: 64px; font-weight: 900; margin: 16px 0 10px 0; letter-spacing: -0.04em; color: #fff; }
+.spec-desc { font-size: 22px; color: var(--accent); font-weight: 600; }
+
+/* =========================================================================
+   SCENE 4: WHATSAPP DELIVERY (12.0s - 17.5s | Frames 360 - 525)
+   ========================================================================= */
+#s4_wrap {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 90px;
+}
+#s4_phone {
+  position: relative; width: 440px; height: 860px;
+  background: #0f172a;
+  border-radius: 54px;
+  border: 8px solid #334155;
+  box-shadow: 0 35px 90px rgba(0,0,0,0.9), 0 0 50px rgba(16, 185, 129, 0.25);
+  overflow: hidden; display: flex; flex-direction: column;
+}
+.phone-notch {
+  width: 160px; height: 26px; background: #334155; margin: 0 auto 16px auto;
+  border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;
+}
+.wa-chat-header {
+  padding: 12px 20px; background: #1e293b; display: flex; align-items: center; gap: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.wa-avatar {
+  width: 44px; height: 44px; border-radius: 50%; background: var(--accent);
+  display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 20px; color: #02040a;
+}
+.wa-name { font-size: 18px; font-weight: 700; color: #fff; }
+.wa-status { font-size: 13px; color: var(--accent); font-weight: 500; }
+.wa-body {
+  flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 16px;
+  background: #090e17;
+}
+.wa-bubble {
+  align-self: flex-start; max-width: 90%; background: #1e293b;
+  padding: 18px 20px; border-radius: 20px; border-top-left-radius: 4px;
+  font-size: 16px; line-height: 24px; color: #e2e8f0;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+}
+.wa-card {
+  align-self: flex-start; width: 100%; background: #131d2e;
+  border: 1px solid var(--accent); border-radius: 18px; padding: 18px;
+  margin-top: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+.wa-card-tag { font-size: 12px; color: var(--accent); font-weight: 700; text-transform: uppercase; }
+.wa-card-title { font-size: 18px; font-weight: 700; color: #fff; margin: 6px 0; }
+.wa-card-btn {
+  display: block; width: 100%; text-align: center; background: var(--accent);
+  color: #02040a; font-weight: 800; font-size: 14px; padding: 12px; border-radius: 10px; margin-top: 12px;
+}
+
+#s4_info {
+  display: flex; flex-direction: column; justify-content: center; max-width: 800px;
+}
+#s4_bigText {
+  font-size: 80px; line-height: 96px; font-weight: 900; letter-spacing: -0.04em;
+}
+#s4_timerBox {
+  display: inline-flex; align-items: center; gap: 24px; margin-top: 44px;
+  background: var(--ground-card); border: 2px solid var(--accent);
+  border-radius: 24px; padding: 22px 40px; box-shadow: 0 0 40px var(--accent-glow);
+}
+#s4_timerVal {
+  font-size: 68px; font-weight: 900; color: var(--accent); font-variant-numeric: tabular-nums;
+}
+#s4_timerLbl {
+  font-size: 24px; font-weight: 600; color: var(--ink-soft); line-height: 34px;
+}
+
+/* =========================================================================
+   SCENE 5: CLOSING LOCKUP (17.5s - 22.0s | Frames 525 - 660)
+   ========================================================================= */
+#s5_wrap {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+#s5_logoGroup {
+  display: flex; align-items: center; gap: 36px; margin-bottom: 28px;
+}
+#s5_logoImg {
+  width: 150px; height: 150px; object-fit: contain;
+  filter: drop-shadow(0 0 35px var(--accent-glow));
+}
+#s5_brandName {
+  font-size: 118px; font-weight: 900; letter-spacing: -0.05em; color: #fff;
+  text-shadow: 0 0 50px rgba(16, 185, 129, 0.5);
+}
+#s5_slogan {
+  font-size: 46px; font-weight: 500; color: var(--ink-soft); letter-spacing: -0.02em; margin-bottom: 44px;
+}
+#s5_url {
+  font-size: 54px; font-weight: 800; color: var(--accent);
+  letter-spacing: -0.03em;
+  background: rgba(16, 185, 129, 0.12); border: 1px solid var(--border-card);
+  padding: 18px 48px; border-radius: 40px;
+  box-shadow: 0 0 35px rgba(16, 185, 129, 0.25);
+}
+</style>
+</head>
+<body>
+<div id="main">
+  <div class="grid-bg"></div>
+  <div class="radial-glow"></div>
+  <div id="laserCore"></div>
+
+  <!-- SCENE 1: HOOK -->
+  <section id="s1" class="scene">
+    <div id="cam1" class="cam">
+      <div id="s1_wrap">
+        <h1 id="s1_headline">Dias calculando<br>propostas manuais?</h1>
+        <p id="s1_sub">O lead esfria enquanto você perde tempo em planilhas.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCENE 2: SCAN & AI EXTRACTION -->
+  <section id="s2" class="scene">
+    <div id="cam2" class="cam">
+      <h2 id="s2_title">Sua IA lê a conta de luz em 3 segundos.</h2>
+      <div id="s2_wrap">
+        <div id="s2_billCard">
+          <div id="s2_laserScan"></div>
+          <div class="bill-header">
+            <span class="bill-title">FATURA DE ENERGIA</span>
+            <span class="bill-badge">CONEXÃO ENERGIVIA</span>
+          </div>
+          <div class="bill-row">
+            <span>Titular:</span> <strong>Condomínio Solar Park</strong>
+          </div>
+          <div class="bill-row">
+            <span>Município / UF:</span> <strong>Ribeirão Preto / SP</strong>
+          </div>
+          <div class="bill-row">
+            <span>Distribuidora:</span> <strong>CPFL Paulista</strong>
+          </div>
+          <div class="bill-chart">
+            <div class="chart-bar" id="bar1" style="height:60%"></div>
+            <div class="chart-bar" id="bar2" style="height:75%"></div>
+            <div class="chart-bar" id="bar3" style="height:90%"></div>
+            <div class="chart-bar" id="bar4" style="height:80%"></div>
+            <div class="chart-bar" id="bar5" style="height:95%"></div>
+            <div class="chart-bar" id="bar6" style="height:100%"></div>
+          </div>
+          <div class="bill-row">
+            <span>Histórico de 12 Meses:</span> <strong>Consumo Médio Apurado</strong>
+          </div>
+        </div>
+
+        <div id="s2_extracted">
+          <div class="extract-pill" id="pill1"><span>⚡</span> Consumo: <strong>1.450 kWh</strong></div>
+          <div class="extract-pill" id="pill2"><span>📊</span> Tarifa: <strong>R$ 0,98 / kWh</strong></div>
+          <div class="extract-pill" id="pill3"><span>☀️</span> Irradiação: <strong>5.32 kWh/m²</strong></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCENE 3: SIZING & SOLAR ENGINE -->
+  <section id="s3" class="scene">
+    <div id="cam3" class="cam">
+      <div id="s3_wrap">
+        <h2 id="s3_title">Dimensionamento automático do kit ideal.</h2>
+        <div id="s3_specGrid">
+          <div class="spec-card" id="cardA">
+            <div class="spec-label">Potência da Usina</div>
+            <div class="spec-val"><span id="countKwp">0.0</span> kWp</div>
+            <div class="spec-desc">22x Módulos 585W TOPCon</div>
+          </div>
+          <div class="spec-card highlight" id="cardB">
+            <div class="spec-label">Geração Mensal Estimada</div>
+            <div class="spec-val"><span id="countGen">0</span> kWh</div>
+            <div class="spec-desc">100% da meta de compensação</div>
+          </div>
+          <div class="spec-card" id="cardC">
+            <div class="spec-label">Economia para o Cliente</div>
+            <div class="spec-val">R$ <span id="countEco">0</span></div>
+            <div class="spec-desc">Economia líquida mensal</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCENE 4: WHATSAPP DELIVERY -->
+  <section id="s4" class="scene">
+    <div id="cam4" class="cam">
+      <div id="s4_wrap">
+        <div id="s4_phone">
+          <div class="phone-notch"></div>
+          <div class="wa-chat-header">
+            <div class="wa-avatar">E</div>
+            <div>
+              <div class="wa-name">EnergivIA Bot</div>
+              <div class="wa-status">online</div>
+            </div>
+          </div>
+          <div class="wa-body">
+            <div class="wa-bubble" id="waBubble">
+              Olá Marcos! Conforme sua conta, preparei o estudo completo de viabilidade solar:
+            </div>
+            <div class="wa-card" id="waCard">
+              <div class="wa-card-tag">Proposta Comercial Pronta</div>
+              <div class="wa-card-title">Usina Solar 12,8 kWp</div>
+              <div style="font-size:13px; color:#94a3b8; margin-bottom:8px;">Economia estimada: R$ 1.340/mês</div>
+              <div class="wa-card-btn">ABRIR PROPOSTA INTERATIVA &rarr;</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="s4_info">
+          <div id="s4_bigText">Proposta comercial pronta no WhatsApp em 2 minutos.</div>
+          <div id="s4_timerBox">
+            <div id="s4_timerVal"><span id="timerSec">00:00</span></div>
+            <div id="s4_timerLbl">Do envio da conta ao cliente fechando contrato.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCENE 5: CLOSING LOCKUP (CTA) -->
+  <section id="s5" class="scene">
+    <div id="cam5" class="cam">
+      <div id="s5_wrap">
+        <div id="s5_logoGroup">
+          <img id="s5_logoImg" src="./assets/icon.png" alt="EnergivIA Logo">
+          <span id="s5_brandName">EnergivIA</span>
+        </div>
+        <p id="s5_slogan">Acelere suas vendas solares.</p>
+        <div id="s5_url">energivia.com.br</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script src="./runtime/vendor/gsap.min.js"></script>
+<script src="./runtime/motion.js"></script>
+<script>
+// Total duration: 22.0 seconds @ 30fps = 660 frames
+const M = Motion.film({ fps: 30, duration: 22, width: 1920, height: 1080, clock: 'smooth' });
+
+// Visibilidade de cenas
+M.show('#s1', 0, 105);
+M.show('#s2', 105, 210);
+M.show('#s3', 210, 360);
+M.show('#s4', 360, 525);
+M.show('#s5', 525, 660);
+
+/* =========================================================================
+   SCENE 1: HOOK (Frames 0 - 105 | 0.0s - 3.5s)
+   ========================================================================= */
+M.enter('#s1_headline', { at: 2, frames: 16, ease: 'snapSettle', from: { scale: 1.6, y: 50, opacity: 0 } });
+M.enter('#s1_sub', { at: 20, frames: 14, ease: 'softLand', from: { y: 25, opacity: 0 } });
+M.kf('#s1_headline', 'scale', [[0, 1], [70, 1.05], [105, 1.15, 'gentleIn']]);
+M.kf('#laserCore', 'opacity', [[0, 0.4], [40, 1.2], [70, 0.7], [105, 1.8, 'crashIn']]);
+
+/* =========================================================================
+   SCENE 2: SCAN & EXTRACTION (Frames 105 - 210 | 3.5s - 7.0s)
+   ========================================================================= */
+M.cut(105, { hide: ['#s1'], show: ['#s2'], label: 'Cut to Bill Scan' });
+M.enter('#s2_title', { at: 105, frames: 12, ease: 'softLand', from: { y: -30, opacity: 0 } });
+M.enter('#s2_billCard', { at: 105, frames: 14, ease: 'softLand', from: { x: -80, scale: 0.9, opacity: 0 } });
+
+// Laser vertical ativo
+M.kf('#s2_laserScan', 'top', [[105, 0], [185, 760, 'softInOut']], { fmt: v => v + 'px' });
+
+// Badges escalonadas
+M.enter('#pill1', { at: 120, frames: 10, ease: 'snapSettle', from: { x: 50, scale: 0.85, opacity: 0 } });
+M.enter('#pill2', { at: 140, frames: 10, ease: 'snapSettle', from: { x: 50, scale: 0.85, opacity: 0 } });
+M.enter('#pill3', { at: 160, frames: 10, ease: 'snapSettle', from: { x: 50, scale: 0.85, opacity: 0 } });
+
+M.kf('#cam2', 'scale', [[105, 1], [180, 1.05], [210, 1.14, 'gentleIn']]);
+
+/* =========================================================================
+   SCENE 3: SIZING & SOLAR ENGINE (Frames 210 - 360 | 7.0s - 12.0s)
+   ========================================================================= */
+M.cut(210, { hide: ['#s2'], show: ['#s3'], label: 'Cut to Sizing Grid' });
+M.enter('#s3_title', { at: 210, frames: 12, ease: 'softLand', from: { y: -30, opacity: 0 } });
+M.enter('#cardA', { at: 212, frames: 12, ease: 'snapSettle', from: { y: 40, scale: 0.92, opacity: 0 } });
+M.enter('#cardB', { at: 220, frames: 12, ease: 'snapSettle', from: { y: 40, scale: 0.92, opacity: 0 } });
+M.enter('#cardC', { at: 228, frames: 12, ease: 'snapSettle', from: { y: 40, scale: 0.92, opacity: 0 } });
+
+// Contadores de engenharia
+M.count('#countKwp', { at: 220, from: 0.0, to: 12.8, frames: 30, fmt: v => v.toFixed(1) });
+M.count('#countGen', { at: 225, from: 0, to: 1720, frames: 35, format: 'comma' });
+M.count('#countEco', { at: 230, from: 0, to: 1340, frames: 35, format: 'comma' });
+
+M.kf('#cam3', 'scale', [[210, 1], [310, 1.05], [360, 1.15, 'gentleIn']]);
+
+/* =========================================================================
+   SCENE 4: WHATSAPP DELIVERY (Frames 360 - 525 | 12.0s - 17.5s)
+   ========================================================================= */
+M.cut(360, { hide: ['#s3'], show: ['#s4'], label: 'Cut to WhatsApp Phone' });
+M.enter('#s4_phone', { at: 360, frames: 14, ease: 'snapSettle', from: { y: 60, scale: 0.88, opacity: 0 } });
+M.enter('#s4_bigText', { at: 365, frames: 14, ease: 'softLand', from: { x: 40, opacity: 0 } });
+M.enter('#waBubble', { at: 380, frames: 12, ease: 'softLand', from: { y: 20, opacity: 0 } });
+M.enter('#waCard', { at: 400, frames: 14, ease: 'snapSettle', from: { scale: 0.9, opacity: 0 } });
+M.enter('#s4_timerBox', { at: 385, frames: 12, ease: 'softLand', from: { scale: 0.9, opacity: 0 } });
+
+// Timer acelerando
+M.count('#timerSec', {
+  at: 385, from: 0, to: 108, frames: 50,
+  fmt: s => {
+    const min = Math.floor(s / 60).toString().padStart(2, '0');
+    const sec = Math.floor(s % 60).toString().padStart(2, '0');
+    return `${min}:${sec}`;
+  }
+});
+
+M.kf('#cam4', 'scale', [[360, 1], [470, 1.05], [525, 1.15, 'gentleIn']]);
+
+/* =========================================================================
+   SCENE 5: CLOSING CTA (Frames 525 - 660 | 17.5s - 22.0s)
+   ========================================================================= */
+M.cut(525, { hide: ['#s4'], show: ['#s5'], label: 'Cut to CTA Lockup' });
+// 1. Logo entra no corte
+M.enter('#s5_logoImg', { at: 525, frames: 20, ease: 'snapSettle', from: { scale: 2.8, opacity: 0 } });
+// 2. Nome da marca entra em seguida
+M.enter('#s5_brandName', { at: 550, frames: 20, ease: 'snapSettle', from: { scale: 1.5, opacity: 0 } });
+// 3. Slogan entra desacelerando
+M.enter('#s5_slogan', { at: 575, frames: 20, ease: 'softLand', from: { y: 40, opacity: 0 } });
+// 4. URL entra com destaque de 600 a 628
+M.enter('#s5_url', { at: 600, frames: 28, ease: 'snapSettle', from: { y: 60, scale: 0.7, opacity: 0 } });
+
+// Feixe laser central acompanha o clímax no momento da URL
+M.kf('#laserCore', 'opacity', [[525, 0.8], [600, 2.0], [628, 1.0], [660, 1.0]]);
+
+// Hold final de 1.07s (frames 628 a 660 = 32 quadros = 1.07s <= 1.4s -> PASS G3)
+M.kf('#cam5', 'scale', [[525, 0.94], [628, 1.0, 'glide'], [660, 1.0]]);
+
+window.__ready = Motion.loaded();
+</script>
+</body>
+</html>

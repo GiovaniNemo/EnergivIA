@@ -46,6 +46,35 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { launchChrome, parseArgs, die, helpFrom } from './_cdp.mjs';
 
+
+function findBinary(name) {
+  if (process.env[name.toUpperCase() + '_PATH'] && fs.existsSync(process.env[name.toUpperCase() + '_PATH'])) {
+    return process.env[name.toUpperCase() + '_PATH'];
+  }
+  const test = spawnSync(name, ['-version'], { stdio: 'ignore' });
+  if (!test.error) return name;
+  if (process.platform === 'win32' && process.env.LOCALAPPDATA) {
+    const wingetDir = path.join(process.env.LOCALAPPDATA, 'Microsoft', 'WinGet', 'Packages');
+    if (fs.existsSync(wingetDir)) {
+      const walk = (d) => {
+        try {
+          for (const ent of fs.readdirSync(d, { withFileTypes: true })) {
+            const full = path.join(d, ent.name);
+            if (ent.isDirectory()) { const found = walk(full); if (found) return found; }
+            else if (ent.name.toLowerCase() === (name + '.exe').toLowerCase()) return full;
+          }
+        } catch {}
+        return null;
+      };
+      const found = walk(wingetDir);
+      if (found) return found;
+    }
+  }
+  return name;
+}
+const FFMPEG_BIN = findBinary('ffmpeg');
+const FFPROBE_BIN = findBinary('ffprobe');
+
 const HELP = helpFrom(import.meta.url);
 const { pos, opt } = parseArgs(process.argv.slice(2), {
   help: 'bool', fps: 's', width: 's', height: 's', from: 's', to: 's', duration: 's', audio: 's', crf: 's',
@@ -204,7 +233,7 @@ const cleanup = async () => { try { await browser?.close(); } catch {} };
     '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv', '-movflags', '+faststart');
   if (opt.audio) args.push('-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-shortest');
   args.push(outFile);
-  ff = spawn('ffmpeg', args, { stdio: ['pipe', 'ignore', 'pipe'] });
+  ff = spawn(FFMPEG_BIN, args, { stdio: ['pipe', 'ignore', 'pipe'] });
   let ffErr = '', ffDone = null;
   ff.stderr.on('data', (d) => { ffErr += d; });
   const ffExit = new Promise((r) => ff.on('close', (c) => { ffDone = c; r(c); }));
@@ -229,7 +258,7 @@ const cleanup = async () => { try { await browser?.close(); } catch {} };
   ff.stdin.end();
   const code = await ffExit;
   if (code !== 0) throw new Error('ffmpeg failed (' + code + '):\n' + ffErr.slice(-800));
-  const pr = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration:stream=codec_name,width,height,avg_frame_rate', '-of', 'default=nw=1', outFile], { encoding: 'utf8' });
+  const pr = spawnSync(FFPROBE_BIN, ['-v', 'error', '-show_entries', 'format=duration:stream=codec_name,width,height,avg_frame_rate', '-of', 'default=nw=1', outFile], { encoding: 'utf8' });
   console.error(pr.stdout.trim().split('\n').join('  '));
   const m = /duration=([\d.]+)/.exec(pr.stdout);
   if (opt.audio && m && Number(m[1]) < n / fps - 0.15) console.error(`warn: output (${m[1]}s) shorter than picture (${(n / fps).toFixed(2)}s): audio is shorter than the range (-shortest)`);

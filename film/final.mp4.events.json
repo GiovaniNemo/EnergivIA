@@ -1,0 +1,224 @@
+[
+  {
+    "t": 0,
+    "frame": 0,
+    "type": "show",
+    "label": "#s1"
+  },
+  {
+    "t": 0.0667,
+    "frame": 2,
+    "type": "enter",
+    "label": "#s1_headline"
+  },
+  {
+    "t": 0.6667,
+    "frame": 20,
+    "type": "enter",
+    "label": "#s1_sub"
+  },
+  {
+    "t": 3.5,
+    "frame": 105,
+    "type": "show",
+    "label": "#s2"
+  },
+  {
+    "t": 3.5,
+    "frame": 105,
+    "type": "cut",
+    "label": "Cut to Bill Scan"
+  },
+  {
+    "t": 3.5,
+    "frame": 105,
+    "type": "enter",
+    "label": "#s2_title"
+  },
+  {
+    "t": 3.5,
+    "frame": 105,
+    "type": "enter",
+    "label": "#s2_billCard"
+  },
+  {
+    "t": 4,
+    "frame": 120,
+    "type": "enter",
+    "label": "#pill1"
+  },
+  {
+    "t": 4.6667,
+    "frame": 140,
+    "type": "enter",
+    "label": "#pill2"
+  },
+  {
+    "t": 5.3333,
+    "frame": 160,
+    "type": "enter",
+    "label": "#pill3"
+  },
+  {
+    "t": 7,
+    "frame": 210,
+    "type": "show",
+    "label": "#s3"
+  },
+  {
+    "t": 7,
+    "frame": 210,
+    "type": "cut",
+    "label": "Cut to Sizing Grid"
+  },
+  {
+    "t": 7,
+    "frame": 210,
+    "type": "enter",
+    "label": "#s3_title"
+  },
+  {
+    "t": 7.0667,
+    "frame": 212,
+    "type": "enter",
+    "label": "#cardA"
+  },
+  {
+    "t": 7.3333,
+    "frame": 220,
+    "type": "enter",
+    "label": "#cardB"
+  },
+  {
+    "t": 7.3333,
+    "frame": 220,
+    "type": "count",
+    "label": "start 0"
+  },
+  {
+    "t": 7.5,
+    "frame": 225,
+    "type": "count",
+    "label": "start 0"
+  },
+  {
+    "t": 7.6,
+    "frame": 228,
+    "type": "enter",
+    "label": "#cardC"
+  },
+  {
+    "t": 7.6667,
+    "frame": 230,
+    "type": "count",
+    "label": "start 0"
+  },
+  {
+    "t": 8.3333,
+    "frame": 250,
+    "type": "count",
+    "label": "land 12.8"
+  },
+  {
+    "t": 8.6667,
+    "frame": 260,
+    "type": "count",
+    "label": "land 1720"
+  },
+  {
+    "t": 8.8333,
+    "frame": 265,
+    "type": "count",
+    "label": "land 1340"
+  },
+  {
+    "t": 12,
+    "frame": 360,
+    "type": "show",
+    "label": "#s4"
+  },
+  {
+    "t": 12,
+    "frame": 360,
+    "type": "cut",
+    "label": "Cut to WhatsApp Phone"
+  },
+  {
+    "t": 12,
+    "frame": 360,
+    "type": "enter",
+    "label": "#s4_phone"
+  },
+  {
+    "t": 12.1667,
+    "frame": 365,
+    "type": "enter",
+    "label": "#s4_bigText"
+  },
+  {
+    "t": 12.6667,
+    "frame": 380,
+    "type": "enter",
+    "label": "#waBubble"
+  },
+  {
+    "t": 12.8333,
+    "frame": 385,
+    "type": "enter",
+    "label": "#s4_timerBox"
+  },
+  {
+    "t": 12.8333,
+    "frame": 385,
+    "type": "count",
+    "label": "start 0"
+  },
+  {
+    "t": 13.3333,
+    "frame": 400,
+    "type": "enter",
+    "label": "#waCard"
+  },
+  {
+    "t": 14.5,
+    "frame": 435,
+    "type": "count",
+    "label": "land 108"
+  },
+  {
+    "t": 17.5,
+    "frame": 525,
+    "type": "show",
+    "label": "#s5"
+  },
+  {
+    "t": 17.5,
+    "frame": 525,
+    "type": "cut",
+    "label": "Cut to CTA Lockup"
+  },
+  {
+    "t": 17.5,
+    "frame": 525,
+    "type": "enter",
+    "label": "#s5_logoImg"
+  },
+  {
+    "t": 18.3333,
+    "frame": 550,
+    "type": "enter",
+    "label": "#s5_brandName"
+  },
+  {
+    "t": 19.1667,
+    "frame": 575,
+    "type": "enter",
+    "label": "#s5_slogan"
+  },
+  {
+    "t": 20,
+    "frame": 600,
+    "type": "enter",
+    "label": "#s5_url"
+  }
+]
