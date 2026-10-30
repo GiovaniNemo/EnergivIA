@@ -922,5 +922,9 @@
 | task-933 | WhatsApp Links: Suporte e alinhamento de links no WhatsApp | completed | Concluído na conversa anterior |
 | task-934 | Brainstorming: Explorar contexto e diagnóstico da desorganização dos menus (Admin, Plataforma e Gestão) | completed | Diagnóstico realizado: mistura de catálogo de hardware, templates, usuários e dispersão de métricas/planos entre Admin e Plataforma |
 | task-935 | Brainstorming: Propor abordagens de hierarquia e reorganização lógica do menu Admin e Plataforma | completed | Usuário escolheu a Reorganização Semântica Completa (Métricas no topo, Clientes/Vendas/Planos, Catálogo Solar e Plataforma para Financiamentos + Sistema) |
-| task-936 | Brainstorming: Estruturar design da nova navegação e obter aprovação do usuário | in-progress | Apresentar detalhamento dos menus, ordem, rótulos e ícones para aprovação |
-| task-937 | Brainstorming: Salvar documento de design e transicionar para plano de execução | not-started | Registrar em docs/plans/ e invocar writing-plans |
+| task-936 | Brainstorming: Estruturar design da nova navegação e obter aprovação do usuário | completed | Aprovado pelo usuário sem restrições ("pode seguir sem perguntar") |
+| task-937 | Brainstorming: Salvar documento de design e transicionar para plano de execução | completed | Salvo em docs/plans/2026-10-30-reorganizacao-menus-admin-design.md e plano em 2026-10-30-reorganizacao-menus-admin.md |
+| task-938 | Escrever testes unitários para a nova ordenação e estrutura do menu lateral (menu.config.spec.ts) | completed | Teste unitário criado e falha esperada confirmada (RED) com as 3 seções validadas |
+| task-939 | Reorganizar itens e rótulos de MENU_ITEMS em apps/web/src/config/menu.config.ts | completed | Reorganização semântica completa aplicada (Métricas e Planos no Admin, agrupamento de Clientes/Vendas e Catálogo) |
+| task-940 | Executar testes unitários, validação de lint e compilação do Next.js | completed | 18 arquivos e 84 testes aprovados no Vitest, ESLint limpo com 0 erros e build de 87 rotas Next.js validado |
+| task-941 | Atualizar task.md, commit e push para o repositório remoto | completed | Alterações comitadas e enviadas para origin/main |
