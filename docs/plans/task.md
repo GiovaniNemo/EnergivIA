@@ -917,3 +917,4 @@
 | task-928 | Frontend Web: Rota /w/[code] de ponte rápida e gravação de cookie para o WhatsApp | completed | Rota /w/[code] criada com storeReferralCodeExplicit, salto para wa.me e fallback elegante |
 | task-929 | Frontend Comercial: Exibição de Link do Bot e botão de compartilhar em grupos em SalesRepLinkCard | completed | Card atualizado com links duplos (Bot no WhatsApp e Cadastro Web) e botão Divulgar no WhatsApp |
 | task-930 | Validação completa (testes automatizados Vitest, build API e Web), commit e push | completed | 41 testes Vitest passaram, ESLint limpo, builds NestJS e Next.js (88 rotas com /w/[code]) gerados e push sincronizado |
+| task-931 | Elaborar ideia central, PAGE e storyboard cena a cena do vídeo de lançamento da EnergivIA para aprovação do usuário | completed | Storyboard detalhado de 22s criado em film/STORYBOARD.md com PAGE, 5 beats, métricas e gates G0-G5 |
