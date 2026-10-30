@@ -919,3 +919,8 @@
 | task-930 | Validação completa (testes automatizados Vitest, build API e Web), commit e push | completed | 41 testes Vitest passaram, ESLint limpo, builds NestJS e Next.js (88 rotas com /w/[code]) gerados e push sincronizado |
 | task-931 | Elaborar ideia central, PAGE e storyboard cena a cena do vídeo de lançamento da EnergivIA para aprovação do usuário | completed | Storyboard detalhado de 22s criado em film/STORYBOARD.md com PAGE, 5 beats, métricas e gates G0-G5 |
 | task-932 | Montar runtime, codificar film/index.html e renderizar final.mp4 com exportação | completed | Vídeo de 22s renderizado com Chrome e FFmpeg, auditado pelos gates G0-G5, NOTE.md criado e final.mp4 salvo na pasta Downloads |
+| task-933 | WhatsApp Links: Suporte e alinhamento de links no WhatsApp | completed | Concluído na conversa anterior |
+| task-934 | Brainstorming: Explorar contexto e diagnóstico da desorganização dos menus (Admin, Plataforma e Gestão) | completed | Diagnóstico realizado: mistura de catálogo de hardware, templates, usuários e dispersão de métricas/planos entre Admin e Plataforma |
+| task-935 | Brainstorming: Propor abordagens de hierarquia e reorganização lógica do menu Admin e Plataforma | completed | Usuário escolheu a Reorganização Semântica Completa (Métricas no topo, Clientes/Vendas/Planos, Catálogo Solar e Plataforma para Financiamentos + Sistema) |
+| task-936 | Brainstorming: Estruturar design da nova navegação e obter aprovação do usuário | in-progress | Apresentar detalhamento dos menus, ordem, rótulos e ícones para aprovação |
+| task-937 | Brainstorming: Salvar documento de design e transicionar para plano de execução | not-started | Registrar em docs/plans/ e invocar writing-plans |
