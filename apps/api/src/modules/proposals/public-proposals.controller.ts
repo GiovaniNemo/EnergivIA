@@ -10,6 +10,7 @@ import {
   Res,
   StreamableFile,
 } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import type { Response } from "express";
 import { ProposalsService } from "./proposals.service";
 import { Public } from "../../common/decorators/public.decorator";
@@ -21,6 +22,7 @@ export class PublicProposalsController {
   constructor(private readonly proposalsService: ProposalsService) {}
 
   @Get(":id")
+  @Throttle({ short: { limit: 10, ttl: 10_000 }, medium: { limit: 30, ttl: 60_000 } })
   findPublic(
     @Param("id") id: string,
     @Query("pdf") isPdfQuery?: string,
@@ -36,6 +38,7 @@ export class PublicProposalsController {
   }
 
   @Get(":id/pdf")
+  @Throttle({ short: { limit: 2, ttl: 10_000 }, medium: { limit: 10, ttl: 60_000 } })
   @Header("Content-Type", "application/pdf")
   @Header("Cache-Control", "no-store")
   async downloadPdf(@Param("id") id: string, @Res({ passthrough: true }) res: Response) {
@@ -45,6 +48,7 @@ export class PublicProposalsController {
   }
 
   @Post(":id/view")
+  @Throttle({ short: { limit: 5, ttl: 10_000 }, medium: { limit: 20, ttl: 60_000 } })
   trackView(
     @Param("id") id: string,
     @Query("pdf") isPdfQuery?: string,
@@ -62,6 +66,7 @@ export class PublicProposalsController {
   }
 
   @Post(":id/respond")
+  @Throttle({ short: { limit: 2, ttl: 10_000 }, medium: { limit: 10, ttl: 60_000 } })
   respondPublic(@Param("id") id: string, @Body() dto: RespondPublicProposalDto) {
     return this.proposalsService.respondPublicById(id, dto);
   }

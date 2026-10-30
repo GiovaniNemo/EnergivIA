@@ -11,6 +11,7 @@ import {
   Header,
   StreamableFile,
 } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import type { JwtPayload } from "@energivia/types";
 import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
 import { OrgOwnerOrAdminGuard } from "../../common/guards/org-owner-or-admin.guard";
@@ -25,11 +26,13 @@ export class ProposalOperationsController {
   constructor(private readonly proposalsService: ProposalsService) {}
 
   @Post("generate-ai-section")
+  @Throttle({ short: { limit: 2, ttl: 10_000 }, medium: { limit: 10, ttl: 60_000 } })
   generateAiSection(@Body() body: { prompt: string; contextText?: string }) {
     return this.proposalsService.generateAiSection(body.prompt, body.contextText);
   }
 
   @Post("render-html-pdf")
+  @Throttle({ short: { limit: 3, ttl: 10_000 }, medium: { limit: 15, ttl: 60_000 } })
   @Header("Content-Type", "application/pdf")
   async renderHtmlPdf(@Body() body: { html: string; title?: string }) {
     const buffer = await this.proposalsService.renderHtmlPdf(body.html);
@@ -37,6 +40,7 @@ export class ProposalOperationsController {
   }
 
   @Post("render-thumbnail")
+  @Throttle({ short: { limit: 3, ttl: 10_000 }, medium: { limit: 15, ttl: 60_000 } })
   async renderThumbnail(@Body() body: { url: string; selector?: string }) {
     return this.proposalsService.renderThumbnail(body.url, body.selector);
   }
@@ -56,6 +60,7 @@ export class ProposalOperationsController {
   }
 
   @Get(":id/generate-pdf")
+  @Throttle({ short: { limit: 3, ttl: 10_000 }, medium: { limit: 15, ttl: 60_000 } })
   @Header("Content-Type", "application/pdf")
   async generatePdf(@Param("id") id: string) {
     const buffer = await this.proposalsService.generatePdf(id);

@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Post, UseGuards, Headers } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { FeedbacksService } from "./feedbacks.service";
 import { CreateFeedbackDto } from "./dto/create-feedback.dto";
 import { SkipTrialLock } from "../../common/decorators/skip-trial-lock.decorator";
@@ -16,6 +17,7 @@ export class FeedbacksController {
   @Public()
   @SkipTrialLock()
   @UseGuards(UnifiedAuthGuard)
+  @Throttle({ short: { limit: 1, ttl: 10_000 }, medium: { limit: 5, ttl: 60_000 } })
   create(
     @Body() dto: CreateFeedbackDto,
     @CurrentUser() user?: JwtPayload,

@@ -4,6 +4,23 @@ import { extractEnergyBillFromPdfBuffer, extractEnergyBillFromImage } from "@/li
 
 export const maxDuration = 60;
 
+// Rate limit em memória no Next.js (máx 20 mensagens por minuto por usuário autenticado)
+const chatRateLimits = new Map<string, { count: number; expiresAt: number }>();
+
+function checkChatRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const existing = chatRateLimits.get(userId);
+  if (!existing || now > existing.expiresAt) {
+    chatRateLimits.set(userId, { count: 1, expiresAt: now + 60_000 });
+    return true;
+  }
+  if (existing.count >= 20) {
+    return false;
+  }
+  existing.count++;
+  return true;
+}
+
 function createTextStreamResponse(text: string) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -39,67 +56,80 @@ export async function POST(req: Request) {
       return new Response("Mensagens inválidas", { status: 400 });
     }
 
-    // 1. Autenticação e validação de plano / organização
+    // 1. Autenticação obrigatória e validação de plano / organização
+    const session = await auth0.getSession();
+    if (!session?.user) {
+      return new Response(
+        JSON.stringify({ error: "Não autorizado. Faça login para utilizar o assistente de IA." }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = session.user.sub || session.user.email || "user";
+    if (!checkChatRateLimit(userId)) {
+      return new Response(
+        "Muitas mensagens em curto intervalo. Aguarde alguns instantes antes de enviar novamente.",
+        { status: 429, headers: { "Content-Type": "text/plain; charset=utf-8" } }
+      );
+    }
+
     let integratorCompanyName = "EnergivIA";
     let currentOrgId = "";
     let userAuthToken = "";
 
     try {
-      const session = await auth0.getSession();
-      if (session) {
-        let token = "";
-        try {
-          const authResult = await auth0.getAccessToken({
-            audience: process.env["AUTH0_AUDIENCE"],
-          });
-          token = authResult.token || session.accessToken || session.idToken || "";
-        } catch {
-          token = session.idToken || session.accessToken || "";
-        }
-        userAuthToken = token;
+      let token = "";
+      try {
+        const authResult = await auth0.getAccessToken({
+          audience: process.env["AUTH0_AUDIENCE"],
+        });
+        token = authResult.token || session.accessToken || session.idToken || "";
+      } catch {
+        token = session.idToken || session.accessToken || "";
+      }
+      userAuthToken = token;
 
-        if (token) {
-          const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
-          const meRes = await fetch(`${baseURL}/auth/me`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (meRes.ok) {
-            const meData = await meRes.json();
-            const isTrial = meData.isTrial ?? false;
-            const isLocked = Boolean(
-              (isTrial && meData.trialExpired) ||
-              (isTrial && meData.isTrialProposalLimitReached) ||
-              (!isTrial && meData.isProposalLimitReached) ||
-              meData.isTrialLocked
-            );
-            if (isLocked) {
-              let lockMsg =
-                "☀️ Seu período de testes de 7 dias úteis encerrou. Faça upgrade para continuar utilizando o assistente com IA.\n\n👉 Acesse: https://app.energivia.com.br/gestao/meus-planos";
-              if (isTrial && meData.isTrialProposalLimitReached) {
-                lockMsg =
-                  "⚡ Você atingiu o limite de 20 propostas gratuitas do período de teste. Faça upgrade para continuar gerando orçamentos com a IA.\n\n👉 Acesse: https://app.energivia.com.br/gestao/meus-planos";
-              } else if (!isTrial && meData.isProposalLimitReached) {
-                lockMsg = `⚡ Você atingiu o limite mensal de ${meData.proposalsLimit ?? 50} propostas do seu plano. Faça upgrade para o Plano Pro para continuar gerando orçamentos.\n\n👉 Acesse: https://app.energivia.com.br/gestao/meus-planos`;
-              }
-              return new Response(lockMsg, {
-                status: 200,
-                headers: { "Content-Type": "text/plain; charset=utf-8" },
-              });
+      if (token) {
+        const baseURL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000/api";
+        const meRes = await fetch(`${baseURL}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          const isTrial = meData.isTrial ?? false;
+          const isLocked = Boolean(
+            (isTrial && meData.trialExpired) ||
+            (isTrial && meData.isTrialProposalLimitReached) ||
+            (!isTrial && meData.isProposalLimitReached) ||
+            meData.isTrialLocked
+          );
+          if (isLocked) {
+            let lockMsg =
+              "☀️ Seu período de testes de 7 dias úteis encerrou. Faça upgrade para continuar utilizando o assistente com IA.\n\n👉 Acesse: https://app.energivia.com.br/gestao/meus-planos";
+            if (isTrial && meData.isTrialProposalLimitReached) {
+              lockMsg =
+                "⚡ Você atingiu o limite de 20 propostas gratuitas do período de teste. Faça upgrade para continuar gerando orçamentos com a IA.\n\n👉 Acesse: https://app.energivia.com.br/gestao/meus-planos";
+            } else if (!isTrial && meData.isProposalLimitReached) {
+              lockMsg = `⚡ Você atingiu o limite mensal de ${meData.proposalsLimit ?? 50} propostas do seu plano. Faça upgrade para o Plano Pro para continuar gerando orçamentos.\n\n👉 Acesse: https://app.energivia.com.br/gestao/meus-planos`;
             }
+            return new Response(lockMsg, {
+              status: 200,
+              headers: { "Content-Type": "text/plain; charset=utf-8" },
+            });
+          }
 
-            if (meData.organizations && meData.organizations.length > 0) {
-              const currentOrg =
-                meData.organizations.find((o: any) => o.id === meData.currentOrganizationId) ||
-                meData.organizations[0];
-              if (currentOrg) {
-                currentOrgId = currentOrg.id || "";
-                if (currentOrg.name) {
-                  integratorCompanyName = currentOrg.name;
-                }
+          if (meData.organizations && meData.organizations.length > 0) {
+            const currentOrg =
+              meData.organizations.find((o: any) => o.id === meData.currentOrganizationId) ||
+              meData.organizations[0];
+            if (currentOrg) {
+              currentOrgId = currentOrg.id || "";
+              if (currentOrg.name) {
+                integratorCompanyName = currentOrg.name;
               }
-            } else if (meData.company) {
-              integratorCompanyName = meData.company;
             }
+          } else if (meData.company) {
+            integratorCompanyName = meData.company;
           }
         }
       }

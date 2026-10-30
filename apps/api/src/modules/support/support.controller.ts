@@ -1,4 +1,5 @@
 import { Body, Controller, Post, UseGuards, Headers } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { SupportService } from "./support.service";
 import { CreateSupportTicketDto } from "./dto/create-support-ticket.dto";
 import { SkipTrialLock } from "../../common/decorators/skip-trial-lock.decorator";
@@ -16,6 +17,7 @@ export class SupportController {
   @Public()
   @SkipTrialLock()
   @UseGuards(UnifiedAuthGuard)
+  @Throttle({ short: { limit: 1, ttl: 10_000 }, medium: { limit: 5, ttl: 60_000 } })
   createTicket(
     @Body() dto: CreateSupportTicketDto,
     @CurrentUser() user?: JwtPayload,

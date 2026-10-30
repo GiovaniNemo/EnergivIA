@@ -10,6 +10,7 @@ import {
   Inject,
   Req,
 } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import type { Request } from "express";
 import { OrganizationsService } from "./organizations.service";
 import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
@@ -27,6 +28,7 @@ export class OrganizationsController {
   constructor(@Inject(OrganizationsService) private readonly organizations: OrganizationsService) {}
 
   @Post()
+  @Throttle({ short: { limit: 1, ttl: 10_000 }, medium: { limit: 5, ttl: 60_000 } })
   create(@CurrentUser() user: JwtPayload, @Body() dto: CreateOrganizationDto, @Req() req: Request) {
     const rawIp =
       (req.headers["x-forwarded-for"] as string) ||

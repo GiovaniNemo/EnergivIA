@@ -2,7 +2,8 @@ import * as path from "node:path";
 import { Module } from "@nestjs/common";
 import { APP_FILTER, APP_GUARD } from "@nestjs/core";
 import { ConfigModule } from "@nestjs/config";
-import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
+import { ThrottlerModule } from "@nestjs/throttler";
+import { AppThrottlerGuard } from "./common/guards/app-throttler.guard";
 import { SentryGlobalFilter, SentryModule } from "@sentry/nestjs/setup";
 import { UnifiedAuthGuard } from "./common/guards/unified-auth.guard";
 import { TrialLockGuard } from "./common/guards/trial-lock.guard";
@@ -111,8 +112,8 @@ import { SalesModule } from "./modules/sales/sales.module";
   ],
   providers: [
     { provide: APP_FILTER, useClass: SentryGlobalFilter },
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: UnifiedAuthGuard },
+    { provide: APP_GUARD, useClass: AppThrottlerGuard },
     { provide: APP_GUARD, useClass: TrialLockGuard },
   ],
 })

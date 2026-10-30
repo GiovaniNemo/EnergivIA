@@ -11,6 +11,7 @@ import {
   Req,
   UseGuards,
 } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import type { Request } from "express";
 import { UnifiedAuthGuard } from "../../common/guards/unified-auth.guard";
 import { TenantId } from "../../common/decorators/tenant-id.decorator";
@@ -94,6 +95,7 @@ export class SalesController {
   }
 
   @Post(":id/documents/generate")
+  @Throttle({ short: { limit: 3, ttl: 10_000 }, medium: { limit: 15, ttl: 60_000 } })
   generateDocument(
     @TenantId() tenantId: string,
     @Param("id") id: string,
@@ -103,6 +105,7 @@ export class SalesController {
   }
 
   @Post(":id/documents/:docId/sign-company")
+  @Throttle({ short: { limit: 2, ttl: 10_000 }, medium: { limit: 10, ttl: 60_000 } })
   signCompanyDocument(
     @TenantId() tenantId: string,
     @Param("id") saleId: string,

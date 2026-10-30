@@ -54,6 +54,10 @@ async function bootstrap() {
     rawBody: true,
   });
 
+  // Habilita confiança no proxy reverso (Vercel, Railway, Cloudflare, Next.js proxy)
+  // para leitura fidedigna de req.ip e req.ips a partir do X-Forwarded-For
+  app.set("trust proxy", 1);
+
   app.use(
     json({
       limit: "50mb",

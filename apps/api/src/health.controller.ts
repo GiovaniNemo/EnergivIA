@@ -1,4 +1,5 @@
 import { Controller, Get, HttpException, HttpStatus, Logger, Query } from "@nestjs/common";
+import { SkipThrottle } from "@nestjs/throttler";
 import { Public } from "./common/decorators/public.decorator";
 import { PrismaService } from "./prisma/prisma.service";
 import { EmailService } from "./common/email/email.service";
@@ -17,6 +18,7 @@ interface HealthResponse {
   };
 }
 
+@SkipThrottle()
 @Controller("health")
 @Public()
 export class HealthController {

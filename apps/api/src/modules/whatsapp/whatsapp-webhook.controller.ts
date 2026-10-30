@@ -9,12 +9,14 @@ import {
   Logger,
   HttpCode,
 } from "@nestjs/common";
+import { SkipThrottle } from "@nestjs/throttler";
 import { Public } from "../../common/decorators/public.decorator";
 import { SkipTrialLock } from "../../common/decorators/skip-trial-lock.decorator";
 import { ConfigService } from "@nestjs/config";
 import { Response } from "express";
 import { WhatsappBotService, BillExtractionResult } from "./whatsapp-bot.service";
 
+@SkipThrottle()
 @Controller(["whatsapp", "api/whatsapp"])
 @SkipTrialLock()
 export class WhatsappWebhookController {

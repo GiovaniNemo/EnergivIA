@@ -14,6 +14,7 @@ import {
   HttpCode,
   HttpStatus,
 } from "@nestjs/common";
+import { SkipThrottle } from "@nestjs/throttler";
 import { Public } from "../../common/decorators/public.decorator";
 import { StripeService } from "./stripe.service";
 import { Request } from "express";
@@ -206,6 +207,7 @@ export class StripeController {
 
   // --- WEBHOOK ENDPOINT ---
 
+  @SkipThrottle()
   @Public()
   @Post("webhook")
   @HttpCode(HttpStatus.OK)
