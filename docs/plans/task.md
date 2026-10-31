@@ -941,4 +941,11 @@
 | task-952 | Brainstorming: Propor abordagens para identificar parceiro sem código visível no WhatsApp | completed | Usuário escolheu Frase personalizada por parceiro + Boas-vindas exclusiva da parceria |
 | task-953 | Brainstorming: Apresentar design da solu��o escolhida e obter aprova��o do usu�rio | completed | Aprovado pelo usu�rio sem restri��es (" sim siga sem perguntar\) |
 | task-954 | Brainstorming: Salvar documento de design em docs/plans e commit | completed | Salvo em docs/plans/2026-10-30-frase-parceiro-whatsapp-sem-codigo-design.md |
-| task-955 | Transi��o: Invocar writing-plans para detalhar implementa��o | in-progress | Estruturando plano passo a passo com TDD e migra��o Prisma |
+| task-955 | Transi��o: Invocar writing-plans para detalhar implementa��o | completed | Plano detalhado salvo em docs/plans/2026-10-30-frase-parceiro-whatsapp-sem-codigo.md |
+| task-956 | Prisma: Adicionar partnerBrandName, referralPhrase e customWelcomeMsg no modelo User | not-started | Migra��o e prisma generate |
+| task-957 | Backend: TDD de parser sem�ntico de linguagem natural em whatsapp-referral-parser.ts | not-started | Suporte a express�es Vim pela SolZap, Vi no grupo e retrocompatibilidade |
+| task-958 | Backend: Endpoint p�blico GET /public/referral-info/:code | not-started | Fornecer frase e dados de marca do parceiro com rate limit |
+| task-959 | Backend: Webhook do WhatsApp Bot com resposta VIP de boas-vindas | not-started | Reconhecimento imediato da parceria e atribui��o de lead |
+| task-960 | Frontend: Atualizar ponte web /w/[code]/page.tsx com frase humanizada limpa | not-started | Deep link wa.me 100% natural e persist�ncia de cookies |
+| task-961 | Frontend: Painel do vendedor com customiza��o e preview visual dos bal�es | not-started | Campos de edi��o e visualizador interativo em SalesRepLinkCard.tsx |
+| task-962 | Valida��o completa: testes Vitest, compila��o API e Web, commit e push | not-started | 100% dos testes aprovados e deploy |
