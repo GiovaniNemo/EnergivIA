@@ -937,3 +937,8 @@
 | task-948 | Frontend: Fechar brecha no endpoint /api/chat exigindo autenticação obrigatória | completed | Sessão obrigatória (401 se ausente) e rate limit em memória (20 req/min por usuário) implementados |
 | task-949 | Testes: Escrever testes unitários para AppThrottlerGuard e rotas com rate limit | completed | 9 testes em app-throttler.guard.spec.ts cobrindo user.sub, x-forwarded-for, x-real-ip, fallbacks e skip |
 | task-950 | Validação completa, compilação da API e Web, commit e push para origin/main | completed | 14 arquivos e 113 testes Vitest aprovados, ESLint 0 erros, compilação Next.js (87 rotas) e NestJS aprovados, commit e push |
+| task-951 | Brainstorming: Explorar contexto e diagnóstico do problema da tag de indicação no WhatsApp | completed | Contexto analisado: código técnico (ref: energivia-sakp) causa atrito visual e quebra sensação de atendimento humano |
+| task-952 | Brainstorming: Propor abordagens para identificar parceiro sem código visível no WhatsApp | completed | Usuário escolheu Frase personalizada por parceiro + Boas-vindas exclusiva da parceria |
+| task-953 | Brainstorming: Apresentar design da solu��o escolhida e obter aprova��o do usu�rio | completed | Aprovado pelo usu�rio sem restri��es (" sim siga sem perguntar\) |
+| task-954 | Brainstorming: Salvar documento de design em docs/plans e commit | completed | Salvo em docs/plans/2026-10-30-frase-parceiro-whatsapp-sem-codigo-design.md |
+| task-955 | Transi��o: Invocar writing-plans para detalhar implementa��o | in-progress | Estruturando plano passo a passo com TDD e migra��o Prisma |
